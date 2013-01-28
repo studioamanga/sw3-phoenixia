@@ -19,19 +19,19 @@ class cl_ent
 
 	protected :
 		// Position
-		vertex *pos;
+		swVertex *pos;
 	public :
 		// Fonction d'affichage
 		virtual void afficher(void);
 		// Connaître la position de l'entité
-		vertex getPos(void);
+		swVertex getPos(void);
 		// Constructeur et destructeur
 		cl_ent(void);
-		~cl_ent(void);
+		virtual ~cl_ent(void);
 };
 
-// Retourne sous la forme d'un vertex la position de l'entité
-vertex cl_ent::getPos(void)
+// Retourne sous la forme d'un swVertex la position de l'entité
+swVertex cl_ent::getPos(void)
 {
 	return *(this->pos);
 }
@@ -40,7 +40,7 @@ vertex cl_ent::getPos(void)
 struct cl_input
 {
 	// Booléennes des touches appuyées
-	bool up, down, left, right, goup, godown, shield;
+	bool up, down, left, right, goup, godown, shield, transleft, transright, shoot;
 };
 
 
@@ -65,16 +65,9 @@ public :
 };
 
 cl_model * Map;
+cl_model * SkinMenu=NULL;
 
-typedef struct type_drone
-{
-  char * skin;
-  int vitesse;
-  int effet;
-};
-
-const type_drone SHOKER01={"modelor/shoker.mad",3,-100};
-const type_drone CRYSTAL01={"modelor/drone.mad",0,1};
+#define MAX_WEAPON 9
 
 class cl_drone : public cl_ent
 {
@@ -88,15 +81,17 @@ public :
   
   virtual void Erase(void)=0;
   virtual void afficher(cl_model * skin, float yOscil)=0;
-  virtual void NewDrone(type_drone type, float x=0, float y=0, float z=0)=0;
+  virtual void NewDrone(char * url, float x=0, float y=0, float z=0)=0;
   virtual void Update(void)=0;
 
   // Constructeur
   cl_drone(void);
   // Destructeur
-  ~cl_drone(void);
+  virtual ~cl_drone(void);
 
 };
+
+#include "serie.hpp"
 
 // Classe d'un vaisseau, dérivée d'une entité
 class cl_wing : public cl_ent
@@ -106,12 +101,15 @@ protected :
   float dir, dirMod;
   // Angle d'inclinaison ( axe y ) et angle d'inclinaison dans les virages
   float inclin, inclinMod;
+  float pivot;
   // Facteur de vitesse
   float v, Vfactor;
   // Model (skin)
   cl_model *Model;
   cl_model *ShieldModel;
   cl_model *BallModel;
+  cl_model *ReacteurModel;
+  float ReacteurSize;
   // Sphere de dégat
   char SphereColor;
   // Armure
@@ -121,6 +119,9 @@ protected :
   // Rayon du shield
   float shield;
   bool affBall;
+  // Arme
+  cWeapon Weapon[MAX_WEAPON];
+  int curWeapon;
 public :
   // Appliquer des dégats
   void setDegat(float f);
@@ -153,15 +154,24 @@ public :
   float getInclinMod(void);
   // Modification de la sphere de collision
   void setSphere(char color);
+  // Armes
+  void setCurWeapon(int id);
+  int getCurWeapon(void);
   // Controle des données
   void Control(cl_drone* shok, int nb_enn, cl_drone* crys, int nb_crys, float yOsci) throw (ErrDeleteDrone,CollCrystal,RecolCrystal);
   bool exploreWingColl(int id);
   // Controle de la collision glissante
   bool CtrlColl(int id);
   void regulV(void);
+  void Shoot(void);
+  // Nom de l'arme courante
+  char * getWeaponStr(void);
+  // Charge de l'arme courante
+  int getWeaponFire(void);
+
   // Constructeur et destructeur
   cl_wing(char * url);
-  ~cl_wing(void);
+  virtual ~cl_wing(void);
   
   friend class cl_bsp;
 };
@@ -172,6 +182,30 @@ cl_wing* fly;
 #include "part.cpp"
 
 #define NOSHIELD -999
+
+char * cl_wing::getWeaponStr(void)
+{
+  return Weapon[curWeapon].getNom();
+}
+
+int cl_wing::getWeaponFire(void)
+{
+  return Weapon[curWeapon].getFire();
+}
+
+int cl_wing::getCurWeapon(void)
+{
+  return curWeapon;
+}
+
+void cl_wing::setCurWeapon(int id)
+{
+  this->curWeapon=id;
+  if(this->curWeapon>(MAX_WEAPON-1))
+    this->curWeapon=0;
+  if(this->curWeapon<0)
+    this->curWeapon=(MAX_WEAPON-1);
+}
 
 float cl_wing::getShield(bool update, bool init)
 {
@@ -188,6 +222,15 @@ float cl_wing::getShield(bool update, bool init)
   if(shield==NOSHIELD)
     return NOSHIELD;
   return ((shield*shield*shield)+1);
+}
+
+void cl_wing::Shoot(void)
+{
+  if(this->input->shoot)
+    {
+      float arg2=this->getDirMod(), arg3=this->getInclinMod(), arg4=this->getV();
+      Weapon[curWeapon].Shoot(*this->pos, arg2, arg3, arg4, this->rayon);
+    }
 }
 
 float cl_wing::getArmure(void)
@@ -263,15 +306,15 @@ bool cl_wing::CtrlColl(int id)
 {
   for(int y=0 ; y<MapColl->Noeud[id]->nb_face ; y++)
     {
-	  vertex vTriangle[3]={MapColl->Noeud[id]->face[y].t[0], MapColl->Noeud[id]->face[y].t[1], MapColl->Noeud[id]->face[y].t[2]};
+	  swVertex vTriangle[3]={MapColl->Noeud[id]->face[y].t[0], MapColl->Noeud[id]->face[y].t[1], MapColl->Noeud[id]->face[y].t[2]};
 
-	  vertex vNormal=Normal(vTriangle);
+	  swVertex vNormal=Normal(vTriangle);
 	  float distance=0.0f;
 	  int classification=ClassifySphere(*(this->pos),vNormal,vTriangle[0],rayon,distance);
 	  if(classification==INTERSECTS)
 	    {
-	      vertex vOffset=vNormal*distance;
-	      vertex vIntersection=*(this->pos)-vOffset;
+	      swVertex vOffset=vNormal*distance;
+	      swVertex vIntersection=*(this->pos)-vOffset;
 	      if(InsidePolygon(vIntersection,vTriangle,3) || EdgeSphereCollision(*(this->pos), vTriangle, 3, rayon/2))
 		{
 		  vOffset=GetCollisionOffset(vNormal,rayon,distance);
@@ -287,7 +330,7 @@ bool cl_wing::CtrlColl(int id)
 		}
 	    }
 	}
-  static float LiqColor[4]={getRealFromMadMap(MAPURL,'K',1),getRealFromMadMap(MAPURL,'K',2),getRealFromMadMap(MAPURL,'K',3),getRealFromMadMap(MAPURL,'K',4)};
+  //static float LiqColor[4]={getRealFromMadMap(MAPURL,'K',1),getRealFromMadMap(MAPURL,'K',2),getRealFromMadMap(MAPURL,'K',3),getRealFromMadMap(MAPURL,'K',4)};
   if(this->pos->y<(MapColl->Climat->getLiq()-(MapColl->Climat->getVarLiq()/2)))
     {
       BufferColor[0]=1;//LiqColor[0];
@@ -308,8 +351,8 @@ void cl_wing::Control(cl_drone* shok, int nb_enn, cl_drone* crys, int nb_crys, f
     {
       if(isdead==false)
 	{
-	  printf("You're a dead man now   X(\n");
-	  Particule->AddFumee(fly, vertex(0,0,0), 1, "data/texture/part/fumee.tga", 1000, true);
+	  logOut("You're a dead man now   X(\n");
+	  Particule->AddFumee(fly, swVertex(0,0,0), 1, "data/texture/part/fumee.tga", 5000, true);
 	}
       isdead=true;
       //glColor3d(1,0,0);
@@ -317,21 +360,22 @@ void cl_wing::Control(cl_drone* shok, int nb_enn, cl_drone* crys, int nb_crys, f
   
   // Verifier les eventuelles collisions avec Shoker
   cl_drone * shoker=shok;
+  float sRayon=Shokers->rayon;
   for(int i=0 ; i<nb_enn ; i++)
     {
-      vertex polyColl[4];
-      polyColl[0].x=shoker->getPos().x+2;
+      swVertex polyColl[4];
+      polyColl[0].x=shoker->getPos().x+sRayon;
       polyColl[0].y=shoker->getPos().y;
-      polyColl[0].z=shoker->getPos().z+2;
-      polyColl[1].x=shoker->getPos().x-2;
+      polyColl[0].z=shoker->getPos().z+sRayon;
+      polyColl[1].x=shoker->getPos().x-sRayon;
       polyColl[1].y=shoker->getPos().y;
-      polyColl[1].z=shoker->getPos().z+2;
-      polyColl[2].x=shoker->getPos().x-2;
+      polyColl[1].z=shoker->getPos().z+sRayon;
+      polyColl[2].x=shoker->getPos().x-sRayon;
       polyColl[2].y=shoker->getPos().y;
-      polyColl[2].z=shoker->getPos().z-2;
-      polyColl[3].x=shoker->getPos().x+2;
+      polyColl[2].z=shoker->getPos().z-sRayon;
+      polyColl[3].x=shoker->getPos().x+sRayon;
       polyColl[3].y=shoker->getPos().y;
-      polyColl[3].z=shoker->getPos().z-2;
+      polyColl[3].z=shoker->getPos().z-sRayon;
       
       if(SpherePolygonCollision(polyColl, *(this->pos), 4, rayon))
 	{
@@ -345,19 +389,20 @@ void cl_wing::Control(cl_drone* shok, int nb_enn, cl_drone* crys, int nb_crys, f
 
   
   // Verifier les eventuelles destruction de Crystal par Shield
-  vertex v0= this->getPos();
+  swVertex v0= this->getPos();
   float f0=this->getShield(false,false);
   float a0=this->getDir();
   float a1=this->getInclin();
-  
+  float cRayon=Crystals->rayon;
+
   if(f0!=NOSHIELD)
     {
       f0=f0*this->getShieldR();
-      
+   
       cl_drone * crystal=crys;
       for(int i=0 ; i<nb_crys ; i++)
-	{     
-	  vertex polygColl[4];
+	{
+	  swVertex polygColl[4];
 	  polygColl[0].x=v0.x+(Cos(-a0+90)*f0);
 	  polygColl[0].y=v0.y;
 	  polygColl[0].z=v0.z+(Sin(-a0+90)*f0);
@@ -371,8 +416,8 @@ void cl_wing::Control(cl_drone* shok, int nb_enn, cl_drone* crys, int nb_crys, f
 	  polygColl[3].y=v0.y;
 	  polygColl[3].z=v0.z+(Sin(-a0-90)*f0);
 
-	  vertex vC=crystal->getPos();
-	  if(SpherePolygonCollision(polygColl, vC, 4, 2/*rayon drone*/))
+	  swVertex vC=crystal->getPos();
+	  if(SpherePolygonCollision(polygColl, vC, 4, cRayon))
 	    {
 	      MapColl->NbCrystals--;
 	      Particule->AddExplosion(crystal->getPos(),15);
@@ -393,7 +438,7 @@ void cl_wing::Control(cl_drone* shok, int nb_enn, cl_drone* crys, int nb_crys, f
 	  polygColl[3].y=v0.y;
 	  polygColl[3].z=v0.z+(Sin(-a0+90)*f0);
 	  
-	  if(SpherePolygonCollision(polygColl, vC, 4, 2))
+	  if(SpherePolygonCollision(polygColl, vC, 4, cRayon))
 	    {
 	      MapColl->NbCrystals--;
 	      Particule->AddExplosion(crystal->getPos(),15);
@@ -409,19 +454,19 @@ void cl_wing::Control(cl_drone* shok, int nb_enn, cl_drone* crys, int nb_crys, f
   cl_drone * crystal=crys;
   for(int i=0 ; i<nb_crys ; i++)
     {
-      vertex polyColl[4];
-      polyColl[0].x=crystal->getPos().x+2;
+      swVertex polyColl[4];
+      polyColl[0].x=crystal->getPos().x+cRayon;
       polyColl[0].y=crystal->getPos().y;
-      polyColl[0].z=crystal->getPos().z+2;
-      polyColl[1].x=crystal->getPos().x-2;
+      polyColl[0].z=crystal->getPos().z+cRayon;
+      polyColl[1].x=crystal->getPos().x-cRayon;
       polyColl[1].y=crystal->getPos().y;
-      polyColl[1].z=crystal->getPos().z+2;
-      polyColl[2].x=crystal->getPos().x-2;
+      polyColl[1].z=crystal->getPos().z+cRayon;
+      polyColl[2].x=crystal->getPos().x-cRayon;
       polyColl[2].y=crystal->getPos().y;
-      polyColl[2].z=crystal->getPos().z-2;
-      polyColl[3].x=crystal->getPos().x+2;
+      polyColl[2].z=crystal->getPos().z-cRayon;
+      polyColl[3].x=crystal->getPos().x+cRayon;
       polyColl[3].y=crystal->getPos().y;
-      polyColl[3].z=crystal->getPos().z-2;
+      polyColl[3].z=crystal->getPos().z-cRayon;
 
       if(SpherePolygonCollision(polyColl, *(this->pos), 4, rayon))
 	{
@@ -449,8 +494,8 @@ void cl_wing::setSphere(char color)
 // Constructeur de la classe d'entité
 cl_ent::cl_ent(void)
 {
-	// Allocation mémoire du vertex dynamique de position
-	pos=new vertex;
+	// Allocation mémoire du swVertex dynamique de position
+	pos=new swVertex;
 	// Donner une position à l'origine
 	pos->x=0;
 	pos->y=0;
@@ -460,7 +505,7 @@ cl_ent::cl_ent(void)
 // Destructeur de la classe d'entité
 cl_ent::~cl_ent(void)
 {
-	// Liberation du vertex de position
+	// Liberation du swVertex de position
 	delete pos;
 }
 
@@ -520,6 +565,8 @@ void cl_wing::afficher(void)
 	glRotated(this->dir+this->dirMod,0,1,0);
 	// Rotation autour de z pour l'inclinaison
 	glRotated(this->inclin+this->inclinMod,0,0,1);
+	// Rotation autour de x pour l'inclinaison
+	glRotated(this->pivot,1,0,0);
 	// Affichage du model du vaisseau
 	Model->aff();
 	// Reprise de la matrice d'origine
@@ -537,44 +584,72 @@ void cl_wing::affTrans(void)
   if(ballRot>360)
     ballRot-=360;
 
-  if(s!=NOSHIELD || affBall)
+  for(int iW=0 ; iW<MAX_WEAPON ; iW++)
+    this->Weapon[iW].Aff();
+
+  // Sauvegarde de la matrice courante
+  glPushMatrix();
+  // Translation vers les positions en x, y et z du vaisseau
+  glTranslated(this->getPos().x,this->getPos().y,this->getPos().z);
+  // Rotation autour de y pour la direction
+  glRotated(this->dir+this->dirMod,0,1,0);
+  // Rotation autour de z pour l'inclinaison
+  glRotated(this->inclin+this->inclinMod,0,0,1);
+  // Rotation autour de x pour l'inclinaison
+  glRotated(this->pivot,1,0,0);
+
+  if(LIGHTON)
+    glDisable(GL_LIGHTING);
+  glDisable(GL_FOG);
+  glEnable(GL_BLEND);
+  glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+  //glBlendFunc(GL_SRC_ALPHA,GL_ONE);
+
+  if(ISARB)
     {
-      // Sauvegarde de la matrice courante
+      glPointSize (150*this->ReacteurSize);
+      glEnable (GL_POINT_SPRITE_ARB);
+      glTexEnvf (GL_POINT_SPRITE_ARB, GL_COORD_REPLACE_ARB, GL_TRUE);
+    }
+  glColor4f(1,1,1,RandFloat(0.7,1));
+  ReacteurModel->aff();
+  glDisable (GL_POINT_SPRITE_ARB);
+  glPointSize (1);
+
+  if(affBall)
+    {
       glPushMatrix();
-      // Translation vers les positions en x, y et z du vaisseau
-      glTranslated(this->getPos().x,this->getPos().y,this->getPos().z);
-      // Rotation autour de y pour la direction
-      glRotated(this->dir+this->dirMod,0,1,0);
-      // Rotation autour de z pour l'inclinaison
-      glRotated(this->inclin+this->inclinMod,0,0,1);
-	
-    
-      if(LIGHTON)
-	glDisable(GL_LIGHTING);
-      glDisable(GL_FOG);
-      glEnable(GL_BLEND);
-      glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-      //glBlendFunc(GL_SRC_ALPHA,GL_ONE);
-      glColor4f(1,1,1,1);
-      if(affBall)
-	{
-	  glRotated(ballRot,0,1,0);
-	  BallModel->aff();
-	  affBall=false;
-	}
-      if(s!=NOSHIELD)
-	{
-	  glScalef(s,s,s);
-	  ShieldModel->aff();
-	}
-      glDisable(GL_BLEND);
-      if(LIGHTON)
-	glEnable(GL_LIGHTING);
-      glEnable(GL_FOG);
- 
-      // Reprise de la matrice d'origine
+      glRotated(ballRot,0,1,0);
+      BallModel->aff();
+      affBall=false;
       glPopMatrix();
     }
+  if(s!=NOSHIELD)
+    {
+      glScalef(s,s,s);
+      ShieldModel->aff();
+      glScalef(1+s,1+s,1+s);
+    }
+  // affichage du viseur
+  tcache->setTexture();
+  glBegin(GL_QUADS);
+  glTexCoord2f(0.5,0.5);  glVertex3f(9,0.7,-2);
+  glTexCoord2f(0.8,0.5);  glVertex3f(9,0.7,2);
+  glTexCoord2f(0.8,0.61); glVertex3f(9,-0.7,2);
+  glTexCoord2f(0.5,0.61); glVertex3f(9,-0.7,-2);
+  glTexCoord2f(0.5,0.5);  glVertex3f(15,0.35,-1);
+  glTexCoord2f(0.8,0.5);  glVertex3f(15,0.35,1);
+  glTexCoord2f(0.8,0.61); glVertex3f(15,-0.35,1);
+  glTexCoord2f(0.5,0.61); glVertex3f(15,-0.35,-1);
+  glEnd();
+
+  glDisable(GL_BLEND);
+  if(LIGHTON)
+    glEnable(GL_LIGHTING);
+  glEnable(GL_FOG);
+ 
+  // Reprise de la matrice d'origine
+  glPopMatrix();
 
   return;
 }
@@ -595,6 +670,7 @@ void cl_wing::regulV(void)
     }
   
   return;
+
 }
 
 // Fonction de remise à jour des positions du vaisseau en fonction des touches pressées
@@ -602,6 +678,7 @@ void cl_wing::avancer(void)
 {
   static bool forUp=false, forDown=false, forRight=false, forLeft=false;
   bool Force=false;
+
   if(MapColl->IsTop(this->pos->y) && (this->inclin>0) )
   {
     forDown=false;
@@ -682,7 +759,6 @@ void cl_wing::avancer(void)
       this->setV(this->getV()-(GETTIMER*FACT_DECEL*this->Vfactor));
     else
       regulV();
-  
 
   if( (this->input->up==true && forDown==false ) || forUp==true )
     {	// Touche 'haut'
@@ -728,10 +804,50 @@ void cl_wing::avancer(void)
 
   // On remet à jour la position en y par rapport à l'angle d'inclinaison
   pos->y=this->v*Sin(inclin)*GETTIMER*FACT_DEPL+this->pos->y;
-  
   // On remet à jour les positions en x et z par rapport à l'angle de direction
   pos->x=this->pos->x+this->v*Cos(dir)*Cos(valAbs(inclin))*GETTIMER*FACT_DEPL;
   pos->z=this->pos->z-this->v*Sin(dir)*Cos(valAbs(inclin))*GETTIMER*FACT_DEPL;
+
+  float limitPivot=valAbs(this->v*40-25);
+  // On remet à jour les positions pour les mouvements de translation
+  if( this->v>0 && ((this->input->transright && forLeft==false ) || forRight==true ) )
+    {
+      pos->x=this->pos->x+this->v*Cos(dir-90)*Cos(valAbs(inclin))*GETTIMER*FACT_DEPL*2;
+      pos->z=this->pos->z-this->v*Sin(dir-90)*Cos(valAbs(inclin))*GETTIMER*FACT_DEPL*2;
+      pivot+=GETTIMER*0.2;
+      if(pivot>limitPivot)
+	pivot=limitPivot;
+    }
+  else
+    {
+      if( (this->input->transleft && forRight==false ) || forLeft==true )
+	{
+	  pos->x=this->pos->x+this->v*Cos(dir+90)*Cos(valAbs(inclin))*GETTIMER*FACT_DEPL*2;
+	  pos->z=this->pos->z-this->v*Sin(dir+90)*Cos(valAbs(inclin))*GETTIMER*FACT_DEPL*2;
+	  pivot-=GETTIMER*0.2;
+	  limitPivot=limitPivot*(-1);
+	  if(pivot<limitPivot)
+	    pivot=limitPivot;
+	}
+      else
+	{
+	  // et de l'axe de pivot
+	  if(pivot<0)
+	    {
+	      pivot=int(pivot)%360;
+	      pivot+=GETTIMER*0.2;
+	      if(pivot>0)
+		pivot=0;
+	    }
+	  if(pivot>0)
+	    {
+	      pivot=int(pivot)%360;
+	      pivot-=GETTIMER*0.2;
+	      if(pivot<0)
+		pivot=0;
+	    }
+	}
+      }
   
   
 
@@ -764,7 +880,14 @@ void cl_wing::avancer(void)
     {
       this->pos->z=MapColl->MapLimits[MAPLIMITSLEFT]+100;
     }
-	
+
+  this->Shoot();
+  for(int iW=0 ; iW<MAX_WEAPON ; iW++)
+    Weapon[iW].Update();
+
+  FSOUND_SetVolume(CANAL_JOUEUR, int(VOLUME_FAIBLE+fly->getV()*3));
+  FSOUND_SetFrequency(CANAL_JOUEUR, int(44100+fly->getV()*10000));
+
   return;
 }
 
@@ -789,28 +912,72 @@ cl_wing::cl_wing(char * url)
     }
 
   this->v=1;
-  this->Vfactor=10;
+  this->Vfactor=getRealFromMadWing(WINGURL, 'V');
 
   // Déclaration de la classe qui gère les touches pressées
   input=new cl_input;
   // Toutes les touches sont supposées relachées
   input->goup=false;
   input->godown=false;
+  input->up=false;
   input->down=false;
   input->left=false;
   input->right=false;
+  input->transleft=false;
+  input->transright=false;
+  input->shoot=false;
 
   SphereColor='0';
 
-  armure=100;
-  rayon=2.8;
-  shield=5;
+  armure=getRealFromMadWing(WINGURL, 'A');
+  rayon=getRealFromMadWing(WINGURL, 'R');
+  shield=getRealFromMadWing(WINGURL, 'S');
   affBall=false;
+  pivot=0;
+
+
+  //Weapon=new cWeapon[MAX_WEAPON];
+  // vitesse / attaque / taille / taille explo / portee / cadence / nb fire
+  Weapon[0].weaponInit(1  , 1  , 0, 1 , 1, 1,
+		       getNbFromMadWing(WINGURL, 'W', 0),
+		       true,  false, NULL, "Blaster");
+  Weapon[1].weaponInit(2  , 0.5, 0, 1 , 1, 0.4 ,
+		       getNbFromMadWing(WINGURL, 'W', 1),
+		       true,  false, NULL, "Fire");
+  Weapon[2].weaponInit(0.7, 2  , 1, 1 , 1, 1.25,
+		       getNbFromMadWing(WINGURL, 'W', 2),
+		       true,  true,  NULL, "Bouncer");
+  Weapon[3].weaponInit(1.5, 2  , 1, 1 , 1, 0.5 ,
+		       getNbFromMadWing(WINGURL, 'W', 3),
+		       true,  true,  NULL, "BH Guns");
+  Weapon[4].weaponInit(1  , 1  , 0, 1 , 1, 1.25,
+		       getNbFromMadWing(WINGURL, 'W', 4),
+		       true,  false, NULL, "Wider");
+  Weapon[5].weaponInit(0.5, 10 , 3, 10, 1, 2,
+		       getNbFromMadWing(WINGURL, 'W', 5),
+		       false, true,  NULL, "Bomber");
+  Weapon[6].weaponInit(0.2, 10 , 3, 10, 1, 2,
+		       getNbFromMadWing(WINGURL, 'W', 6),
+		       false, true,  NULL, "Miner");
+  Weapon[7].weaponInit(0.8, 5  , 2, 5 , 1, 2,
+		       getNbFromMadWing(WINGURL, 'W', 7),
+		       false, true,  NULL, "Rocket");
+  Weapon[8].weaponInit(1  , 5  , 2, 5 , 1, 2,
+		       getNbFromMadWing(WINGURL, 'W', 8),
+		       false, true,  NULL, "Advance Rocket");
+  curWeapon=0;
+
+  int nbReacteurs=getNbFromMadWing(WINGURL, 'R');
+  this->ReacteurSize=0;
+  for(int i=0 ; i<nbReacteurs ; i++)
+    this->ReacteurSize+=getRealFromMadWing(WINGURL,'r',i,3);
+  this->ReacteurSize/=nbReacteurs;
+
 
   Model=new cl_model(url);
-  ShieldModel=new cl_model("./data/texture/effect/shield.tga", 'S', shield, shield*0.33, 25, LOADTYPE_TGA32);
-  BallModel=new cl_model("./data/texture/effect/ball.tga", 'U', rayon, 1, 20, LOADTYPE_TGA32);
-
+  ReacteurModel=new cl_model(WINGURL, 'R');
+  ShieldModel=new cl_model("./data/texture/effect/shield.tga", 'S', shield, shield*0.33, 12, LOADTYPE_TGA32);
+  BallModel=new cl_model("./data/texture/effect/ball.tga", 'U', rayon, 1, 12, LOADTYPE_TGA32);
 }
 
 // Destructeur de la classe de vaisseau
@@ -820,5 +987,7 @@ cl_wing::~cl_wing(void)
   delete Model;
   delete ShieldModel;
   delete BallModel;
+  delete ReacteurModel;
+  //  delete Weapon;
 }
 

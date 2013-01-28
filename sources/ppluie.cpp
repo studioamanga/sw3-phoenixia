@@ -9,21 +9,23 @@
 **                                                         **
 *************************************************************/
 
+#define NB_PLUIE_FREE 100
 
 typedef struct PluieEnt
 {
-  vertex pos;
-  PluieEnt * NEXT;
-  PluieEnt * BACK;
+  swVertex pos;
+  bool Is;
 };
 
 // Gestionnaires des générateurs de particules
 class ParticulePluie : public ParticuleEngine
 {
-
 protected:
-  PluieEnt *fEnt;
-  PluieEnt *lEnt;
+  PluieEnt * Ent;
+  int tabFree[NB_PLUIE_FREE];
+  int nbFree;
+  int nbEnt;
+  int maxEnt;
 
   float miny,v;
 
@@ -41,7 +43,7 @@ public:
   void CreateEnt();
 
   ParticulePluie (ParticulePluie* pBACK, cl_wing* center, float Intensite);
-  ~ParticulePluie (void);
+  virtual ~ParticulePluie (void);
 
 };
 
@@ -49,39 +51,36 @@ void ParticulePluie::Update(void)
 {
   miny=MapColl->Climat->getLiq();
 
-  PluieEnt *pEE=fEnt;
+  this->nbFree=0;
+  //printf("%d\n",nbEnt);
 
-  while(pEE!=NULL)
+  for(int iE=0, nE=0 ; nE<nbEnt ; iE++)
     {
-      if(pEE->pos.y<miny||pEE->pos.y<(Center->getPos().y-100))
+      // Si la particule existe on l'update
+      if(Ent[iE].Is)
 	{
-	  PluieEnt * pOld=pEE;
-	  if(pEE==fEnt)
-	    fEnt=pEE->NEXT;
-	  if(pEE==lEnt)
-	    lEnt=pEE->BACK;
-	  
-	  if(pEE->BACK!=NULL)
-	    pEE->BACK->NEXT=pEE->NEXT;
-	  if(pEE->NEXT!=NULL)
-	    pEE->NEXT->BACK=pEE->BACK;
-
-	  pOld=pEE->NEXT;
-	  delete pEE;
-
-	  pEE=pOld;
-	  continue;
+	  if(Ent[iE].pos.y<miny||Ent[iE].pos.y<(Center->getPos().y-100))
+	    {
+	      Ent[iE].Is=false;
+	      nbEnt--;
+	      continue;
+	    }
+	  else
+	    {
+	      Ent[iE].pos.y-=v*GETTIMER*0.02;
+	      nE++;
+	    }
 	}
+      // sinon on la stocke comme libre
       else
 	{
-	  pEE->pos.x;
-	  pEE->pos.y-=v*GETTIMER*0.02;
-	  pEE->pos.z;
-      
-	  pEE=pEE->NEXT;
+	  if(this->nbFree<(NB_PLUIE_FREE-1))
+	    {
+	      this->tabFree[this->nbFree]=iE;
+	      this->nbFree++;
+	    }
 	}
     }
-  
   for(int i=0 ; i< int(0.1*GETTIMER*MapColl->Climat->getPluie()) ; i++)
     CreateEnt();
 }
@@ -93,8 +92,6 @@ bool ParticulePluie::IsDead(void)
 
 void ParticulePluie::Aff(void)
 {
-  PluieEnt *pEE=fEnt;
-
   glDisable(GL_TEXTURE_2D);
   glEnable(GL_BLEND);
   glBlendFunc(GL_SRC_ALPHA,GL_ONE);
@@ -103,14 +100,14 @@ void ParticulePluie::Aff(void)
   
   glBegin(GL_LINES);  
       
-  while(pEE!=NULL)
+  for(int iE=0, nE=0 ; nE<nbEnt ; iE++)
     {
-      glVertex3f(pEE->pos.x, pEE->pos.y, pEE->pos.z);
-      glVertex3f(pEE->pos.x, pEE->pos.y-8, pEE->pos.z);
-      
-      // printf("%f,%f,%f\n",pEE->pos.x, pEE->pos.y, pEE->pos.z);
-      
-      pEE=pEE->NEXT;
+      if(Ent[iE].Is)
+	{
+	  glVertex3f(Ent[iE].pos.x, Ent[iE].pos.y, Ent[iE].pos.z);
+	  glVertex3f(Ent[iE].pos.x, Ent[iE].pos.y-8, Ent[iE].pos.z);
+	  nE++;
+	}
     }
   glEnd();
 
@@ -120,22 +117,32 @@ void ParticulePluie::Aff(void)
 
 void ParticulePluie::CreateEnt()
 {
-  if(lEnt!=NULL)
-  {
-    lEnt->NEXT=new PluieEnt;
-    lEnt->NEXT->NEXT=NULL;
-    lEnt->NEXT->BACK=lEnt;
-    lEnt=lEnt->NEXT;
-  }
+  int iE=0;
+  // Si l'id d'un emplacement libre est stocké, on le prend
+  if(this->nbFree>0)
+    {
+      this->nbFree--;
+      iE=this->tabFree[this->nbFree];
+    }
+  // sinon on en recherche un
   else
-  {
-    lEnt=new PluieEnt;
-    lEnt->NEXT=lEnt->BACK=NULL;
-    fEnt=lEnt;
-  }
-  
+    for( ;; iE++)
+      if(!Ent[iE].Is)
+	break;
+
   float x=RandFloat(Center->getPos().x-100,Center->getPos().x+100), z=RandFloat(Center->getPos().z-100,Center->getPos().z+100), y=RandFloat(-100,100);
-  lEnt->pos=vertex(x,Center->getPos().y+100+y,z);
+  Ent[iE].pos=swVertex(x,Center->getPos().y+100+y,z);
+  Ent[iE].Is=true;
+
+  nbEnt++;
+  if(nbEnt>(maxEnt-10))
+    {
+      int raz=maxEnt;
+      maxEnt+=500;
+      Ent=(PluieEnt*)realloc(Ent,sizeof(PluieEnt)*maxEnt);
+      for( ; raz<maxEnt ; raz++)
+	Ent[raz].Is=false;
+    }
 }
 
 ParticulePluie::ParticulePluie(ParticulePluie* pBACK, cl_wing* center, float Intensite)
@@ -143,11 +150,20 @@ ParticulePluie::ParticulePluie(ParticulePluie* pBACK, cl_wing* center, float Int
   NEXT=NULL;
   BACK=pBACK;
 
-  lEnt=fEnt=NULL;
   v=40;
 
+  nbEnt=0;
+  maxEnt=100;
+
+  Ent=(PluieEnt*)malloc(sizeof(PluieEnt)*maxEnt);
+
+  for(int raz=0 ; raz<maxEnt ; raz++)
+    Ent[raz].Is=false;
+
   Center=center;
-  
+
+  this->nbFree=0;
+
   for(int i=0 ; i< (Intensite*10) ; i++)
     CreateEnt();
 }
@@ -155,12 +171,5 @@ ParticulePluie::ParticulePluie(ParticulePluie* pBACK, cl_wing* center, float Int
 
 ParticulePluie::~ParticulePluie(void)
 {
-  PluieEnt *pEE=fEnt;
-  PluieEnt *pEEd=NULL;
-  while(pEE!=NULL)
-    {
-      pEEd=pEE;
-      pEE=pEE->NEXT;
-      delete pEEd;
-    }
+  free(Ent);
 }

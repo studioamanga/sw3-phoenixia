@@ -3,7 +3,7 @@
 ******************** S-W 3 : PHOENIXIA **********************
 *************************************************************
 **                                                         **
-** particule_explosion.cpp **** auteur : Vincent Tourraine **
+********* pexplo.cpp **** auteur : Vincent Tourraine ********
 **                                                         **
 ** Classe du moteur de particule.                          **
 **                                                         **
@@ -12,11 +12,10 @@
 
 typedef struct ExplosionEnt
 {
-  vertex pos;
-  vertex dir;
+  swVertex pos;
+  swVertex dir;
   char speed;
-  ExplosionEnt * NEXT;
-  ExplosionEnt * BACK;
+  bool Is;
 };
 
 // Gestionnaires des générateurs de particules
@@ -24,8 +23,9 @@ class ParticuleExplosion : public ParticuleEngine
 {
 
 protected:
-  ExplosionEnt *fEnt;
-  ExplosionEnt *lEnt;
+  ExplosionEnt * Ent;
+  int nbEnt;
+  int maxEnt;
 
   cl_texture *Text;
 
@@ -34,7 +34,7 @@ protected:
 
 public:
 
-  CTimer LifeTime;
+  float LifeTime;
    
   // Mise à jour du moteur de particules
   virtual void Update (void);
@@ -43,50 +43,49 @@ public:
   // Doit on le détruire ?
   virtual bool IsDead(void);
 
-  void CreateEnt(vertex To);
+  void CreateEnt(swVertex To);
 
-  ParticuleExplosion (ParticuleExplosion* pBACK, vertex TO, float Intensite, float Size, bool black);
-  ~ParticuleExplosion (void);
+  ParticuleExplosion (ParticuleExplosion* pBACK, swVertex TO, float Intensite, float Size, bool black);
+  virtual ~ParticuleExplosion (void);
 
 };
 
 #define EXPLOLIFE 1500
 void ParticuleExplosion::Update(void)
 {
-  float t=LifeTime.GetTime();
-  if(black==true && t<(EXPLOLIFE/2))
+  LifeTime-=GETTIMER;
+  float t=LifeTime;
+  if(black==true && t>(EXPLOLIFE/2))
     return;
-  t=t*t;
-  ExplosionEnt *pEE=fEnt;
-  float v=GETTIMER*0.004*(EXPLOLIFE-t)/EXPLOLIFE;
+  float v=GETTIMER*0.4*sqrt(t);
   if(black)
     {
       v*=1.7;
     }
-  while(pEE!=NULL)
+
+  for(int iE=0, nE=0 ; nE<nbEnt ; iE++)
     {
-      float vS=float(pEE->speed)/5000;
-      pEE->pos.x+=pEE->dir.x*v*vS;
-      pEE->pos.y+=pEE->dir.y*v*vS;
-      pEE->pos.z+=pEE->dir.z*v*vS;
-      
-      pEE=pEE->NEXT;
+      if(Ent[iE].Is)
+	{
+	  float vS=float(Ent[iE].speed)/5000;
+	  Ent[iE].pos.x+=Ent[iE].dir.x*v*vS;
+	  Ent[iE].pos.y+=Ent[iE].dir.y*v*vS;
+	  Ent[iE].pos.z+=Ent[iE].dir.z*v*vS;
+	  nE++;
+	}
     }
 }
 
 bool ParticuleExplosion::IsDead(void)
 {
-  if(LifeTime.GetTime()>EXPLOLIFE)
+  if(LifeTime<0)
     return true;
   return false;
 }
 
 void ParticuleExplosion::Aff(void)
 {
-  ExplosionEnt *pEE=fEnt;
- 
-  float t=LifeTime.GetTime();
-  if(black==true && t<(EXPLOLIFE/2))
+  if(black==true && LifeTime>(EXPLOLIFE/2))
     return;
 
   glColor4f(1,1,1,0.5);
@@ -111,82 +110,63 @@ void ParticuleExplosion::Aff(void)
   else
     glBegin(GL_QUADS);  
       
-  while(pEE!=NULL)
-    {
-      if(ISARB)
-	glVertex3f (pEE->pos.x-size, pEE->pos.y, pEE->pos.z);
-      else
-	{
-	  glTexCoord2f(0.0,0.0 );
-	  glVertex3f(pEE->pos.x-size, pEE->pos.y-size, pEE->pos.z);
-	  glTexCoord2f(0.0,1.0 );
-	  glVertex3f(pEE->pos.x-size, pEE->pos.y+size, pEE->pos.z);
-	  glTexCoord2f(1.0,1.0 );
-	  glVertex3f(pEE->pos.x+size, pEE->pos.y+size, pEE->pos.z);
-	  glTexCoord2f(1.0,0.0 );
-	  glVertex3f(pEE->pos.x+size, pEE->pos.y-size, pEE->pos.z);
-
-	  glVertex3f(pEE->pos.x-size, pEE->pos.y, pEE->pos.z-size);
-	  glTexCoord2f(1.0,1.0 );
-	  glVertex3f(pEE->pos.x-size, pEE->pos.y, pEE->pos.z+size);
-	  glTexCoord2f(0.0,1.0 );
-	  glVertex3f(pEE->pos.x+size, pEE->pos.y, pEE->pos.z+size);
-	  glTexCoord2f(0.0,0.0 );
-	  glVertex3f(pEE->pos.x+size, pEE->pos.y, pEE->pos.z-size);
-
-	  glVertex3f(pEE->pos.x, pEE->pos.y-size, pEE->pos.z-size);
-	  glTexCoord2f(0.0,1.0 );
-	  glVertex3f(pEE->pos.x, pEE->pos.y+size, pEE->pos.z-size);
-	  glTexCoord2f(1.0,1.0 );
-	  glVertex3f(pEE->pos.x, pEE->pos.y+size, pEE->pos.z+size);
-	  glTexCoord2f(1.0,0.0 );
-	  glVertex3f(pEE->pos.x, pEE->pos.y-size, pEE->pos.z+size);
-	}
-      // printf("%f,%f,%f\n",pEE->pos.x, pEE->pos.y, pEE->pos.z);
-      
-      pEE=pEE->NEXT;
-    }
+  for(int iE=0, nE=0 ; nE<nbEnt ; iE++)
+    if(Ent[iE].Is)
+      {
+	affPoint(Ent[iE].pos.x, Ent[iE].pos.y, Ent[iE].pos.z, size);
+	nE++;
+      }
   glEnd();
 
   glDisable (GL_POINT_SPRITE_ARB);
+  glPointSize (1);
   glDisable(GL_BLEND);
   glEnable (GL_DEPTH_TEST);
 }
 
-void ParticuleExplosion::CreateEnt(vertex To)
+void ParticuleExplosion::CreateEnt(swVertex To)
 {
-  if(lEnt!=NULL)
-  {
-    lEnt->NEXT=new ExplosionEnt;
-    lEnt->NEXT->NEXT=NULL;
-    lEnt->NEXT->BACK=lEnt;
-    lEnt=lEnt->NEXT;
-  }
-  else
-  {
-    lEnt=new ExplosionEnt;
-    lEnt->NEXT=lEnt->BACK=NULL;
-    fEnt=lEnt;
-  }
-  
   float RanDir=RandFloat(-M_PI,M_PI), RanInc=RandFloat(-M_PI,M_PI);
-  int RanI=RandInt(2,10);
-  lEnt->speed=RanI;
-  lEnt->dir=vertex(cos(RanDir),sin(RanDir),cos(RanInc));
-  lEnt->pos=To;
+
+  for(int iE=0 ;; iE++)
+    {
+      if(!Ent[iE].Is)
+	{
+	  Ent[iE].pos=To;
+	  Ent[iE].dir=swVertex(cos(RanDir),sin(RanDir),cos(RanInc));
+	  Ent[iE].speed=RandInt(2,10);
+	  Ent[iE].Is=true;
+	  break;
+	}
+    }
+  nbEnt++;
+  if(nbEnt>(maxEnt-1))
+    {
+      int raz=maxEnt;
+      maxEnt+=50;
+      Ent=(ExplosionEnt*)realloc(Ent,sizeof(ExplosionEnt)*maxEnt);
+      for( ; raz<maxEnt ; raz++)
+	Ent[raz].Is=false;
+    }
 }
 
-ParticuleExplosion::ParticuleExplosion(ParticuleExplosion* pBACK, vertex To, float Intensite, float Size, bool black=false)
+ParticuleExplosion::ParticuleExplosion(ParticuleExplosion* pBACK, swVertex To, float Intensite, float Size, bool black=false)
 {
   NEXT=NULL;
   BACK=pBACK;
 
-  lEnt=fEnt=NULL;
-
   size=Size;
   this->black=black;
 
-  LifeTime.Init();
+  nbEnt=0;
+  maxEnt=int(Intensite*40+3);
+
+  Ent=(ExplosionEnt*)malloc(sizeof(ExplosionEnt)*maxEnt);
+
+  for(int raz=0 ; raz<maxEnt ; raz++)
+    Ent[raz].Is=false;
+
+  LifeTime=EXPLOLIFE;
 
   if(black)
     Text=new cl_texture("./data/texture/part/fumee.tga",LOADTYPE_TGA32);
@@ -201,13 +181,6 @@ ParticuleExplosion::ParticuleExplosion(ParticuleExplosion* pBACK, vertex To, flo
 
 ParticuleExplosion::~ParticuleExplosion(void)
 {
-  ExplosionEnt *pEE=fEnt;
-  ExplosionEnt *pEEd=NULL;
-  while(pEE!=NULL)
-    {
-      pEEd=pEE;
-      pEE=pEE->NEXT;
-      delete pEEd;
-    }
+  free (Ent);
   delete Text;
 }

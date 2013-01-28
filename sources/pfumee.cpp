@@ -3,7 +3,7 @@
 ******************** S-W 3 : PHOENIXIA **********************
 *************************************************************
 **                                                         **
-**** particule_fumee.cpp **** auteur : Vincent Tourraine ****
+******** pfumee.cpp **** auteur : Vincent Tourraine *********
 **                                                         **
 ** Classe du moteur de particule.                          **
 **                                                         **
@@ -12,12 +12,11 @@
 
 typedef struct FumeeEnt
 {
-  vertex pos;
-  vertex dir;
+  swVertex pos;
+  swVertex dir;
   float lifetimer;
   int speed;
-  FumeeEnt * NEXT;
-  FumeeEnt * BACK;
+  bool Is;
 };
 
 // Gestionnaires des générateurs de particules
@@ -25,8 +24,9 @@ class ParticuleFumee : public ParticuleEngine
 {
 
 protected:
-  FumeeEnt *fEnt;
-  FumeeEnt *lEnt;
+  FumeeEnt * Ent;
+  int nbEnt;
+  int maxEnt;
 
   cl_texture *Text;
 
@@ -47,65 +47,54 @@ public:
 
   void CreateEnt(void);
 
-  ParticuleFumee (ParticuleFumee* pBACK, cl_wing* theFly, vertex From, float Size, char*Texture, float LifeTime, bool black);
-  ~ParticuleFumee (void);
+  ParticuleFumee (ParticuleFumee* pBACK, cl_wing* theFly, swVertex From, float Size, char*Texture, float LifeTime, bool black);
+  virtual ~ParticuleFumee (void);
 
 };
 
-float FFF=0.00015;
+//float FFF=0.00015;
 
 void ParticuleFumee::Update(void)
 {
-  FumeeEnt *pEE=fEnt;
   float v=GETTIMER*FACT_DEPL*source->getV();
-  while(pEE!=NULL)
+
+  for(int iE=0, nE=0 ; nE<nbEnt ; iE++)
     {
-      pEE->lifetimer-=GETTIMER;
-      if(pEE->lifetimer<0)
+      if(Ent[iE].Is)
 	{
-	  FumeeEnt * pOld=pEE;
-	  if(pEE==fEnt)
-	    fEnt=pEE->NEXT;
-	  if(pEE==lEnt)
-	    lEnt=pEE->BACK;
-	  
-	  if(pEE->BACK!=NULL)
-	    pEE->BACK->NEXT=pEE->NEXT;
-	  if(pEE->NEXT!=NULL)
-	    pEE->NEXT->BACK=pEE->BACK;
-
-	  pOld=pEE->NEXT;
-	  delete pEE;
-
-	  pEE=pOld;
-	  continue;
-	}
-      else
-	{
-	  pEE->pos.x+=pEE->dir.x*v*pEE->speed;
-	  pEE->pos.y+=pEE->dir.y*v*pEE->speed;
-	  pEE->pos.z+=pEE->dir.z*v*pEE->speed;
-
-	  pEE=pEE->NEXT;
+	  Ent[iE].lifetimer-=GETTIMER;
+	  if(Ent[iE].lifetimer<0)
+	    {
+	      Ent[iE].Is=false;
+	      nbEnt--;
+	      continue;
+	    }
+	  else
+	    {
+	      Ent[iE].pos.x+=Ent[iE].dir.x*v*Ent[iE].speed;
+	      Ent[iE].pos.y+=Ent[iE].dir.y*v*Ent[iE].speed;
+	      Ent[iE].pos.z+=Ent[iE].dir.z*v*Ent[iE].speed;
+	      nE++;
+	    }
 	}
     }
 
-  if(source->getV()>=0)
+  if(black || source->getV()>=0)
     for(int i=0 ; i<int(0.8*GETTIMER) ; i++) // 0.8
       CreateEnt();
 }
 
 bool ParticuleFumee::IsDead(void)
 {
+  if(Disp==DISP_MENU)
+    return true;
   return false;
 }
 
 
 void ParticuleFumee::Aff(void)
 {
-  FumeeEnt *pEE=fEnt;
-
-  glEnable(GL_BLEND);
+  //glEnable(GL_BLEND);
   if(black)
     glBlendFunc (GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
   else
@@ -114,41 +103,26 @@ void ParticuleFumee::Aff(void)
 
   Text->setTexture();
 
-  glBegin(GL_QUADS);  
-      
-  while(pEE!=NULL)
+  if(ISARB)
     {
-      glTexCoord2f(0.0,0.0 );
-      glVertex3f(pEE->pos.x-size, pEE->pos.y-size, pEE->pos.z);
-      glTexCoord2f(0.0,1.0 );
-      glVertex3f(pEE->pos.x-size, pEE->pos.y+size, pEE->pos.z);
-      glTexCoord2f(1.0,1.0 );
-      glVertex3f(pEE->pos.x+size, pEE->pos.y+size, pEE->pos.z);
-      glTexCoord2f(1.0,0.0 );
-      glVertex3f(pEE->pos.x+size, pEE->pos.y-size, pEE->pos.z);
-
-      glVertex3f(pEE->pos.x-size, pEE->pos.y, pEE->pos.z-size);
-      glTexCoord2f(1.0,1.0 );
-      glVertex3f(pEE->pos.x-size, pEE->pos.y, pEE->pos.z+size);
-      glTexCoord2f(0.0,1.0 );
-      glVertex3f(pEE->pos.x+size, pEE->pos.y, pEE->pos.z+size);
-      glTexCoord2f(0.0,0.0 );
-      glVertex3f(pEE->pos.x+size, pEE->pos.y, pEE->pos.z-size);
-
-      glVertex3f(pEE->pos.x, pEE->pos.y-size, pEE->pos.z-size);
-      glTexCoord2f(0.0,1.0 );
-      glVertex3f(pEE->pos.x, pEE->pos.y+size, pEE->pos.z-size);
-      glTexCoord2f(1.0,1.0 );
-      glVertex3f(pEE->pos.x, pEE->pos.y+size, pEE->pos.z+size);
-      glTexCoord2f(1.0,0.0 );
-      glVertex3f(pEE->pos.x, pEE->pos.y-size, pEE->pos.z+size);
-
-      //printf("%f,%f,%f\n",pEE->pos.x, pEE->pos.y, pEE->pos.z);
-      
-      pEE=pEE->NEXT;
+      glEnable (GL_POINT_SPRITE_ARB);
+      glTexEnvf (GL_POINT_SPRITE_ARB, GL_COORD_REPLACE_ARB, GL_TRUE);
+      glPointSize (100);
+      glBegin (GL_POINTS);
     }
+  else
+    glBegin(GL_QUADS);  
+      
+  for(int iE=0, nE=0 ; nE<nbEnt ; iE++)
+    if(Ent[iE].Is)
+      {
+	affPoint(Ent[iE].pos.x, Ent[iE].pos.y, Ent[iE].pos.z, size);
+	nE++;
+      }
   glEnd();
 
+  glDisable (GL_POINT_SPRITE_ARB);
+  glPointSize (1);
   glEnable(GL_DEPTH_TEST);
   glDisable(GL_BLEND);
 }
@@ -156,27 +130,8 @@ void ParticuleFumee::Aff(void)
 
 void ParticuleFumee::CreateEnt(void)
 {
-  if(lEnt!=NULL)
-  {
-    lEnt->NEXT=new FumeeEnt;
-    lEnt->NEXT->NEXT=NULL;
-    lEnt->NEXT->BACK=lEnt;
-    lEnt=lEnt->NEXT;
-  }
-  else
-  {
-    lEnt=new FumeeEnt;
-    lEnt->NEXT=lEnt->BACK=NULL;
-    fEnt=lEnt;
-  }
-  
   int rAd=RandInt(10,-10);
   int rAi=RandInt(10,-10);
-
-  lEnt->dir=vertex(-(Cos(source->getDirMod()+rAd))*Sin(valAbs(source->getInclinMod()+rAi)),
-		   -(Sin(source->getInclinMod()+rAi)),
-		   +(Sin(source->getDirMod()+rAd))*Cos(valAbs(source->getInclinMod()+rAi)));
-
   
   float posX, posY, posZ;
 
@@ -184,32 +139,50 @@ void ParticuleFumee::CreateEnt(void)
   posY=-(Sin(source->getInclinMod()+from.aInclin)*from.rayon);
   posZ=(Sin(source->getDirMod()+ from.aDir)*from.rayon)*Cos(valAbs(source->getInclinMod()+from.aInclin));
 
-  // rotation en Z
-  //posY=-Sin(source->getInclinMod()+from.aInclin)*from.rayon;
-  //posX=-Cos(source->getInclinMod()+from.aInclin)*from.rayon;
-  //posZ=Sin( from.aDir)*from.rayon;
-  
-  // rotation en Y
-  //float newrayon=sqrt(posX*posX + posZ*posZ);
-  //posX=-Cos(source->getDirMod())*newrayon;
 
   posX+=source->getPos().x;
   posZ+=source->getPos().z;
   posY+=source->getPos().y;
 
-  lEnt->pos=vertex(posX,posY,posZ);
-
-  lEnt->lifetimer=RandFloat(0,lifetime);
-  lEnt->speed=RandInt(0,2);
+  for(int iE=0 ;; iE++)
+    {
+      if(!Ent[iE].Is)
+	{
+	  Ent[iE].pos=swVertex(posX,posY,posZ);
+	  Ent[iE].dir=swVertex(-(Cos(source->getDirMod()+rAd))*Sin(valAbs(source->getInclinMod()+rAi)),
+			       -(Sin(source->getInclinMod()+rAi)),
+			       +(Sin(source->getDirMod()+rAd))*Cos(valAbs(source->getInclinMod()+rAi)));
+	  Ent[iE].lifetimer=RandFloat(0,lifetime);
+	  Ent[iE].speed=RandInt(0,2);
+	  Ent[iE].Is=true;
+	  break;
+	}
+    }
+  nbEnt++;
+  if(nbEnt>(maxEnt-10))
+    {
+      int raz=maxEnt;
+      maxEnt+=30;
+      Ent=(FumeeEnt*)realloc(Ent,sizeof(FumeeEnt)*maxEnt);
+      for( ; raz<maxEnt ; raz++)
+	Ent[raz].Is=false;
+    }
 }
 
-ParticuleFumee::ParticuleFumee(ParticuleFumee* pBACK, cl_wing* theFly, vertex From, float Size, char*Texture, float LifeTime, bool black)
+ParticuleFumee::ParticuleFumee(ParticuleFumee* pBACK, cl_wing* theFly, swVertex From, float Size, char*Texture, float LifeTime, bool black)
 {
   NEXT=NULL;
   BACK=pBACK;
 
-  lEnt=fEnt=NULL;
   this->black=black;
+
+  nbEnt=0;
+  maxEnt=50;
+
+  Ent=(FumeeEnt*)malloc(sizeof(FumeeEnt)*maxEnt);
+
+  for(int raz=0 ; raz<maxEnt ; raz++)
+    Ent[raz].Is=false;
 
   source=theFly;
 
@@ -229,13 +202,6 @@ ParticuleFumee::ParticuleFumee(ParticuleFumee* pBACK, cl_wing* theFly, vertex Fr
 
 ParticuleFumee::~ParticuleFumee(void)
 {
-  FumeeEnt *pEE=fEnt;
-  FumeeEnt *pEEd=NULL;
-  while(pEE!=NULL)
-    {
-      pEEd=pEE;
-      pEE=pEE->NEXT;
-      delete pEEd;
-    }
+  free(Ent);
   delete Text;
 }

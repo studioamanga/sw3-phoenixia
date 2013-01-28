@@ -12,37 +12,6 @@
 
 
 
-// Ensemble de drones
-class cl_Serie
-{
-private :
-  // Skin
-  cl_model * model;
-public :
-  float yOsc;
-  // Liste des shokers ( element 1 )
-  cl_drone * Drones;
-  // Liste des shokers ( dernier element )
-  cl_drone * LastDrone;
-  // Nombre de drone
-  short nbDrones;
-  // Model (skin) : texture + 2 matériaux
-  GLuint text_shoker;
-  int id_shokerPIQ, id_shokerCOR;
-
-
-  // Detruire un drone
-  void Delete(int id);
-  // Affiche tous les shokers
-  void afficher(void);
-  // Constructeur
-  cl_Serie(char Type, short nb, type_drone type[], vertex positions[]);
-  // Destructeur
-  ~cl_Serie();
-
-  friend class cl_shoker;
-};
-
 void cl_Serie::Delete(int id)
 {
 	if(id!=0)
@@ -53,15 +22,15 @@ void cl_Serie::Delete(int id)
 		{
 			p=p->NEXT;
 		}
-		//cl_drone*err=p->NEXT;
+		cl_drone*err=p->NEXT;
 		p->NEXT=p->NEXT->NEXT;
-		//delete err;
+		delete err;
 	}
 	else
 	{
 		cl_drone*fst=Drones;
 		Drones=Drones->NEXT;
-		//delete fst;
+		delete fst;
 	}
 
 	this->nbDrones--;
@@ -70,17 +39,27 @@ void cl_Serie::Delete(int id)
 }
 
 
-cl_Serie::cl_Serie(char Type, short nb, type_drone type [], vertex positions[])
+cl_Serie::cl_Serie(char Type, short nb, swVertex positions[])
 {
+  char *urlSkin=NULL;
+  if(Type=='S')
+    urlSkin=getStrFromMadMap(MAPURL,'S',1);
+  if(Type=='C')
+    urlSkin=getStrFromMadMap(MAPURL,'D',1);
+
   yOsc=-2;
   this->nbDrones=nb;
   if(Type=='S')
     {
-      this->Drones=new cl_shoker(type[0], positions[0].x, positions[0].y, positions[0].z);
+      this->effet=getNbFromMadShoker(urlSkin,'A');
+      this->rayon=getRealFromMadShoker(urlSkin,'R');
+      this->Drones=new cl_shoker(urlSkin, positions[0].x, positions[0].y, positions[0].z);
     }
   if(Type=='C')
     {
-      this->Drones=new cl_crystal(type[0], positions[0].x, positions[0].y, positions[0].z);
+      this->effet=getNbFromMadDrone(urlSkin,'E');
+      this->rayon=getRealFromMadDrone(urlSkin,'R');
+      this->Drones=new cl_crystal(urlSkin, positions[0].x, positions[0].y, positions[0].z);
     }
   
   
@@ -90,25 +69,16 @@ cl_Serie::cl_Serie(char Type, short nb, type_drone type [], vertex positions[])
   
   for(int i=1 ; i<nb ; i++)
     {
-      p->NewDrone(type[i],positions[i].x, positions[i].y, positions[i].z);
+      p->NewDrone(urlSkin, positions[i].x, positions[i].y, positions[i].z);
       
       p=p->NEXT;
       
     }
-  
-  char *urlSkin=NULL;
-  if(Type=='S')
-    urlSkin=getStrFromMadMap(MAPURL,'S',1);
-  if(Type=='C')
-    urlSkin=getStrFromMadMap(MAPURL,'D',1);
 
   this->model=new cl_model(urlSkin);
 
+  logOut("  [OK] Elaboration de la serie réussie");// (%d elements)\n",nb);
   delete urlSkin;
-  
-  
-  printf("  [OK] Elaboration de la serie réussie (%d elements)\n",nb);
-
 }
 
 cl_Serie::~cl_Serie()
@@ -138,7 +108,3 @@ void cl_Serie::afficher(void)
     }
   return;
 }
-
-cl_Serie* Crystals;
-cl_Serie* Shokers;
-

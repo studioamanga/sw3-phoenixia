@@ -30,12 +30,13 @@ public:
   virtual bool IsDead(void);
 
   ParticuleEngine (void);
-  ~ParticuleEngine (void);
+  virtual ~ParticuleEngine (void);
 
 };
 
 #include "pexplo.cpp"
 #include "ppluie.cpp"
+#include "pspark.cpp"
 #include "pneige.cpp"
 #include "pfumee.cpp"
 
@@ -45,6 +46,7 @@ void ParticuleEngine::Update(void)
 
 bool ParticuleEngine::IsDead(void)
 {
+  return false;
 }
 
 

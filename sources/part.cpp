@@ -28,9 +28,11 @@ public:
   void Aff(void);
 
   // Ajouter une explosion
-  bool AddExplosion(vertex To, float Intensite);
+  bool AddExplosion(swVertex To, float Intensite);
+  // Ajouter une étincelle
+  bool AddSpark(swVertex To, float Intensite);
   // Ajouter une fumée
-  bool AddFumee(cl_wing* theFly, vertex From, float Size, char* Texture, float LifeTime, bool black=false);
+  bool AddFumee(cl_wing* theFly, swVertex From, float Size, char* Texture, float LifeTime, bool black=false);
   // Ajouter une pluie
   bool AddPluie(cl_wing* center, float Intensite);
   // Ajouter de la neige
@@ -93,7 +95,7 @@ void ParticuleManager::Aff(void)
 }
 
 
-bool ParticuleManager::AddExplosion(vertex To, float Intensite)
+bool ParticuleManager::AddExplosion(swVertex To, float Intensite)
 {
   if(lEngine!=NULL)
   {
@@ -113,11 +115,35 @@ bool ParticuleManager::AddExplosion(vertex To, float Intensite)
     lEngine=lEngine->NEXT;
   }
 
+  clSoundMan * Sound=clSoundMan::Create();
+  Sound->JouerStream (SOUND_EXPLO, CANAL_BRUITS, false);
+  FSOUND_SetVolume(CANAL_BRUITS, VOLUME_TFORT);
+
   return true;
 }
 
 
-bool ParticuleManager::AddFumee(cl_wing* theFly, vertex From, float Size, char * Texture, float LifeTime, bool black)
+
+bool ParticuleManager::AddSpark(swVertex To, float Intensite)
+{
+  if(lEngine!=NULL)
+  {
+    lEngine->NEXT=new ParticuleSpark(NULL,To,Intensite);
+    lEngine->NEXT->BACK=lEngine;
+    lEngine=lEngine->NEXT;
+  }
+  else
+  {
+    lEngine=new ParticuleSpark(NULL,To,Intensite);
+    fEngine=lEngine;
+  }
+
+  return true;
+}
+
+
+
+bool ParticuleManager::AddFumee(cl_wing* theFly, swVertex From, float Size, char * Texture, float LifeTime, bool black)
 {
   if(lEngine!=NULL)
   {

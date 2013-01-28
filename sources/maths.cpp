@@ -1,14 +1,15 @@
 
 
+
 /////////////////////////////////////// CROSS \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 /////
 /////   This returns a perpendicular vector from 2 given vectors by taking the cross product.
 /////
 /////////////////////////////////////// CROSS \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-vertex Cross(vertex vVector1, vertex vVector2)
+swVertex Cross(swVertex vVector1, swVertex vVector2)
 {
-    vertex vNormal;                                   // The vector to hold the cross product
+    swVertex vNormal;                                   // The vector to hold the cross product
 
     // The X value for the vector is:  (V1.y * V2.z) - (V1.z * V2.y)                                                    // Get the X value
     vNormal.x = ((vVector1.y * vVector2.z) - (vVector1.z * vVector2.y));
@@ -29,7 +30,7 @@ vertex Cross(vertex vVector1, vertex vVector2)
 /////
 /////////////////////////////////////// MAGNITUDE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-float Magnitude(vertex vNormal)
+float Magnitude(swVertex vNormal)
 {
     // This will give us the magnitude or "Norm" as some say, of our normal.
     // Here is the equation:  magnitude = sqrt(V.x^2 + V.y^2 + V.z^2)  Where V is the vector
@@ -44,7 +45,7 @@ float Magnitude(vertex vNormal)
 /////
 /////////////////////////////////////// NORMALIZE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-vertex Normalize(vertex vNormal)
+swVertex Normalize(swVertex vNormal)
 {
     float magnitude = Magnitude(vNormal);               // Get the magnitude of our normal
 
@@ -67,12 +68,12 @@ vertex Normalize(vertex vNormal)
 /////
 /////////////////////////////////////// NORMAL \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-vertex Normal(vertex vPolygon[])
+swVertex Normal(swVertex vPolygon[])
 {                                                       // Get 2 vectors from the polygon (2 sides), Remember the order!
-    vertex vVector1 = vPolygon[2] - vPolygon[0];
-    vertex vVector2 = vPolygon[1] - vPolygon[0];
+    swVertex vVector1 = vPolygon[2] - vPolygon[0];
+    swVertex vVector2 = vPolygon[1] - vPolygon[0];
 
-    vertex vNormal = Cross(vVector1, vVector2);       // Take the cross product of our 2 vectors to get a perpendicular vector
+    swVertex vNormal = Cross(vVector1, vVector2);       // Take the cross product of our 2 vectors to get a perpendicular vector
 
     // Now we have a normal, but it's at a strange length, so let's make it length 1.
 
@@ -88,7 +89,7 @@ vertex Normal(vertex vPolygon[])
 /////
 /////////////////////////////////// PLANE DISTANCE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-float PlaneDistance(vertex Normal, vertex Point)
+float PlaneDistance(swVertex Normal, swVertex Point)
 {
     float distance = 0;                                 // This variable holds the distance from the plane tot he origin
 
@@ -107,14 +108,14 @@ float PlaneDistance(vertex Normal, vertex Point)
 /////
 /////////////////////////////////// INTERSECTED PLANE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-bool IntersectedPlane(vertex vPoly[], vertex vLine[], vertex &vNormal, float &originDistance)
+bool IntersectedPlane(swVertex vPoly[], swVertex vLine[], swVertex &vNormal, float &originDistance)
 {
     float distance1=0, distance2=0;                     // The distances from the 2 points of the line from the plane
 
     vNormal = Normal(vPoly);                            // We need to get the normal of our plane to go any further
 
     // Let's find the distance our plane is from the origin.  We can find this value
-    // from the normal to the plane (polygon) and any point that lies on that plane (Any vertex)
+    // from the normal to the plane (polygon) and any point that lies on that plane (Any swVertex)
     originDistance = PlaneDistance(vNormal, vPoly[0]);
 
     // Get the distance from point1 from the plane using: Ax + By + Cz + D = (The distance from the plane)
@@ -146,7 +147,7 @@ bool IntersectedPlane(vertex vPoly[], vertex vLine[], vertex &vNormal, float &or
 /////
 /////////////////////////////////// DOT \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-float Dot(vertex vVector1, vertex vVector2)
+float Dot(swVertex vVector1, swVertex vVector2)
 {
     // The dot product is this equation: V1.V2 = (V1.x * V2.x  +  V1.y * V2.y  +  V1.z * V2.z)
     // In math terms, it looks like this:  V1.V2 = ||V1|| ||V2|| cos(theta)
@@ -162,7 +163,7 @@ float Dot(vertex vVector1, vertex vVector2)
 /////
 /////////////////////////////////// ANGLE BETWEEN VECTORS \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-double AngleBetweenVectors(vertex Vector1, vertex Vector2)
+double AngleBetweenVectors(swVertex Vector1, swVertex Vector2)
 {
     // Get the dot product of the vectors
     double dotProduct = Dot(Vector1, Vector2);
@@ -188,9 +189,9 @@ double AngleBetweenVectors(vertex Vector1, vertex Vector2)
 /////
 /////////////////////////////////// INTERSECTION POINT \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-vertex IntersectionPoint(vertex vNormal, vertex vLine[], double distance)
+swVertex IntersectionPoint(swVertex vNormal, swVertex vLine[], double distance)
 {
-    vertex vPoint, vLineDir;                  // Variables to hold the point and the line's direction
+    swVertex vPoint, vLineDir;                  // Variables to hold the point and the line's direction
     double Numerator = 0.0, Denominator = 0.0, dist = 0.0;
 
     // 1)  First we need to get the vector of our line, Then normalize it so it's a length of 1
@@ -232,16 +233,16 @@ vertex IntersectionPoint(vertex vNormal, vertex vLine[], double distance)
 /////
 /////////////////////////////////// INSIDE POLYGON \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-bool InsidePolygon(vertex vIntersection, vertex Poly[], long verticeCount)
+bool InsidePolygon(swVertex vIntersection, swVertex Poly[], long verticeCount)
 {
     const double MATCH_FACTOR = 0.99;       // Used to cover up the error in floating point
     double Angle = 0.0;                     // Initialize the angle
-    vertex vA, vB;                        // Create temp vectors
+    swVertex vA, vB;                        // Create temp vectors
 
-    for (int i = 0; i < verticeCount; i++)      // Go in a circle to each vertex and get the angle between
+    for (int i = 0; i < verticeCount; i++)      // Go in a circle to each swVertex and get the angle between
     {
-        vA = Poly[i] - vIntersection;           // Subtract the intersection point from the current vertex
-                                                // Subtract the point from the next vertex
+        vA = Poly[i] - vIntersection;           // Subtract the intersection point from the current swVertex
+                                                // Subtract the point from the next swVertex
         vB = Poly[(i + 1) % verticeCount] - vIntersection;
 
         Angle += AngleBetweenVectors(vA, vB);   // Find the angle between the 2 vectors and add them all up as we go along
@@ -260,9 +261,9 @@ bool InsidePolygon(vertex vIntersection, vertex Poly[], long verticeCount)
 /////
 /////////////////////////////////// INTERSECTED POLYGON \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-bool IntersectedPolygon(vertex vPoly[], vertex vLine[], int verticeCount)
+bool IntersectedPolygon(swVertex vPoly[], swVertex vLine[], int verticeCount)
 {
-    vertex vNormal;
+    swVertex vNormal;
     float originDistance = 0;
 
     // First, make sure our line intersects the plane
@@ -272,13 +273,46 @@ bool IntersectedPolygon(vertex vPoly[], vertex vLine[], int verticeCount)
 
     // Now that we have our normal and distance passed back from IntersectedPlane(),
     // we can use it to calculate the intersection point.
-    vertex vIntersection = IntersectionPoint(vNormal, vLine, originDistance);
+    swVertex vIntersection = IntersectionPoint(vNormal, vLine, originDistance);
 
     // Now that we have the intersection point, we need to test if it's inside the polygon.
     if(InsidePolygon(vIntersection, vPoly, verticeCount))
         return true;                            // We collided!   Return success
 
     return false;                               // There was no collision, so return false
+}
+
+/////////////////////////////////// INTERSECTED POLYGON \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+/////
+/////   This checks if a line is intersecting a polygon and return the distance
+/////
+/////////////////////////////////// INTERSECTED POLYGON \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
+
+float IntersectedPolygonDist(swVertex vPoly[], swVertex vLine[], int verticeCount)
+{
+    swVertex vNormal;
+    float originDistance = 0;
+
+    // First, make sure our line intersects the plane
+                                     // Reference   // Reference
+    if(!IntersectedPlane(vPoly, vLine,   vNormal,   originDistance))
+        return INF_THEO;
+
+    // Now that we have our normal and distance passed back from IntersectedPlane(),
+    // we can use it to calculate the intersection point.
+    swVertex vIntersection = IntersectionPoint(vNormal, vLine, originDistance);
+
+    // Now that we have the intersection point, we need to test if it's inside the polygon.
+    if(InsidePolygon(vIntersection, vPoly, verticeCount))
+      {
+	//printf(">>  %f %f %f\n", vIntersection.x, vIntersection.y, vIntersection.z);
+	float xD=vIntersection.x-vLine[0].x;
+	float yD=vIntersection.y-vLine[0].y;
+	float zD=vIntersection.z-vLine[0].z;
+        return sqrt(xD*xD + yD*yD + zD*zD);                            // We collided!   Return success
+      }
+
+    return INF_THEO;                               // There was no collision, so return false
 }
 
 
@@ -288,7 +322,7 @@ bool IntersectedPolygon(vertex vPoly[], vertex vLine[], int verticeCount)
 /////
 /////////////////////////////////// DISTANCE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-float Distance(vertex vPoint1, vertex vPoint2)
+float Distance(swVertex vPoint1, swVertex vPoint2)
 {
     // This is the classic formula used in beginning algebra to return the
     // distance between 2 points.  Since it's 3D, we just add the z dimension:
@@ -310,13 +344,13 @@ float Distance(vertex vPoint1, vertex vPoint2)
 /////
 ////////////////////////////// CLOSEST POINT ON LINE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-vertex ClosestPointOnLine(vertex vA, vertex vB, vertex vPoint)
+swVertex ClosestPointOnLine(swVertex vA, swVertex vB, swVertex vPoint)
 {
     // Create the vector from end point vA to our point vPoint.
-    vertex vVector1 = vPoint - vA;
+    swVertex vVector1 = vPoint - vA;
 
     // Create a normalized direction vector from end point vA to end point vB
-    vertex vVector2 = Normalize(vB - vA);
+    swVertex vVector2 = Normalize(vB - vA);
 
     // Use the distance formula to find the distance of the line segment (or magnitude)
     float d = Distance(vA, vB);
@@ -336,11 +370,11 @@ vertex ClosestPointOnLine(vertex vA, vertex vB, vertex vPoint)
         return vB;
  
     // Here we create a vector that is of length t and in the direction of vVector2
-    vertex vVector3 = vVector2 * t;
+    swVertex vVector3 = vVector2 * t;
 
     // To find the closest point on the line segment, we just add vVector3 to the original
     // end point vA.
-    vertex vClosestPoint = vA + vVector3;
+    swVertex vClosestPoint = vA + vVector3;
 
     // Return the closest point on the line segment
     return vClosestPoint;
@@ -355,8 +389,8 @@ vertex ClosestPointOnLine(vertex vA, vertex vB, vertex vPoint)
 /////
 ////////////////////////////// SPHERE POLYGON COLLISION \\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-bool SpherePolygonCollision(vertex vPolygon[],
-                            vertex &vCenter, int vertexCount, float radius)
+bool SpherePolygonCollision(swVertex vPolygon[],
+                            swVertex &vCenter, int vertexCount, float radius)
 {
     // This function is the only function we need to call for testing if a sphere
     // collides with a polygon.  The rest are just helper functions called within here.
@@ -401,7 +435,7 @@ bool SpherePolygonCollision(vertex vPolygon[],
     //    and the plane.  My way just takes 3 multiplies and a subtraction.  You choose.
     //
     // 3) Once we have our psuedo intersection point, we just pass it into InsidePolygon(),
-    //    along with the polygon vertices and the vertex count.  This will then return
+    //    along with the polygon vertices and the swVertex count.  This will then return
     //    true if the intersection point was inside of the polygon, otherwise false.
     //    Remember, just because this returns false doesn't mean we stop there!  If
     //    we didn't collide yet, we need to skip to step 4.
@@ -432,14 +466,14 @@ bool SpherePolygonCollision(vertex vPolygon[],
     // 1) STEP ONE - Finding the sphere's classification
 
     // Let's use our Normal() function to return us the normal to this polygon
-    vertex vNormal = Normal(vPolygon);
+    swVertex vNormal = Normal(vPolygon);
 
     // This will store the distance our sphere is from the plane
     float distance = 0.0f;
 
     // This is where we determine if the sphere is in FRONT, BEHIND, or INTERSECTS the plane
     // of the polygon.  We pass is our sphere center, the polygon's normal, a point on
-    // the plane (vertex), the sphere's radius and an empty float to fill the distance with.
+    // the plane (swVertex), the sphere's radius and an empty float to fill the distance with.
     int classification = ClassifySphere(vCenter, vNormal, vPolygon[0], radius, distance);
 
     // If the sphere intersects the polygon's plane, then we need to check further,
@@ -459,19 +493,19 @@ bool SpherePolygonCollision(vertex vPolygon[],
         // I just go in that direction until my distance from the center is the same as
         // the distance the center of the sphere is from the plane."  By doing this
         // we get an offset to subtract from the center of the sphere.
-        vertex vOffset = vNormal * distance;
+        swVertex vOffset = vNormal * distance;
 
         // Once we have the offset to the plane, we just subtract it from the center
         // of the sphere.  "vPosition" now a point that lies on the plane of the polygon.
         // Whether it is inside the polygon's perimeter is another story.  Usually it
         // is though, unless we get near the edges of the polygon.
-        vertex vPosition = vCenter - vOffset;
+        swVertex vPosition = vCenter - vOffset;
 
         // 3) STEP THREE - Check if the intersection point is inside the polygons perimeter
 
         // This is the same function used in our previous tutorial on Ray to Polygon Collision.
         // If the intersection point is inside the perimeter of the polygon, it returns true.
-        // We pass in the intersection point, the list of vertices and vertex count of the poly.
+        // We pass in the intersection point, the list of vertices and swVertex count of the poly.
         if(InsidePolygon(vPosition, vPolygon, vertexCount))
             return true;    // We collided!
         else
@@ -483,7 +517,7 @@ bool SpherePolygonCollision(vertex vPolygon[],
             // If any part of the sphere intersects the edges of the polygon, we collided.
             // This is only checked if the sphere's center point is outside the edges of the
             // polygon. We pass in the center of the sphere, the list of verts, the polygon
-            // vertex count and the sphere's radius.  If this returns true we have a collision.
+            // swVertex count and the sphere's radius.  If this returns true we have a collision.
             if(EdgeSphereCollision(vCenter, vPolygon, vertexCount, radius))
             {
                 return true;    // We collided! "And you doubted me..." - Sphere
@@ -502,8 +536,8 @@ bool SpherePolygonCollision(vertex vPolygon[],
 /////
 ///////////////////////////////// CLASSIFY SPHERE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-int ClassifySphere(vertex &vCenter,
-                   vertex &vNormal, vertex &vPoint, float radius, float &distance)
+int ClassifySphere(swVertex &vCenter,
+                   swVertex &vNormal, swVertex &vPoint, float radius, float &distance)
 {
     // First we need to find the distance our polygon plane is from the origin.
     // We need this for the distance formula below.
@@ -551,12 +585,12 @@ int ClassifySphere(vertex &vCenter,
 /////
 ///////////////////////////////// EDGE SPHERE COLLSIION \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
 
-bool EdgeSphereCollision(vertex &vCenter,
-                         vertex vPolygon[], int vertexCount, float radius)
+bool EdgeSphereCollision(swVertex &vCenter,
+                         swVertex vPolygon[], int vertexCount, float radius)
 {
-    vertex vPoint;
+    swVertex vPoint;
 
-    // This function takes in the sphere's center, the polygon's vertices, the vertex count
+    // This function takes in the sphere's center, the polygon's vertices, the swVertex count
     // and the radius of the sphere.  We will return true from this function if the sphere
     // is intersecting any of the edges of the polygon.  How it works is, every edge line
     // segment finds the closest point on that line to the center of the sphere.  If the
@@ -568,9 +602,9 @@ bool EdgeSphereCollision(vertex &vCenter,
     for(int i = 0; i < vertexCount; i++)
     {
         // This returns the closest point on the current edge to the center of the sphere.
-        // Notice that we mod the second point of the edge by our vertex count.  This is
-        // so that when we get to the last edge of the polygon, the second vertex of the
-        // edge is the first vertex that we starting with.
+        // Notice that we mod the second point of the edge by our swVertex count.  This is
+        // so that when we get to the last edge of the polygon, the second swVertex of the
+        // edge is the first swVertex that we starting with.
         vPoint = ClosestPointOnLine(vPolygon[i], vPolygon[(i + 1) % vertexCount], vCenter);
 
         // Now, we want to calculate the distance between the closest point and the center
@@ -585,9 +619,9 @@ bool EdgeSphereCollision(vertex &vCenter,
     return false;
 }
 
-vertex Vector(vertex vPoint1, vertex vPoint2)
+swVertex Vector(swVertex vPoint1, swVertex vPoint2)
 {
-    vertex vVector(0,0,0);                             // Initialize our variable to zero
+    swVertex vVector(0,0,0);                             // Initialize our variable to zero
 
     // In order to get a vector from 2 points (a direction) we need to
     // subtract the second point from the first point.
@@ -600,9 +634,9 @@ vertex Vector(vertex vPoint1, vertex vPoint2)
 }
 
 
-vertex GetCollisionOffset(vertex &vNormal, float radius, float distance)
+swVertex GetCollisionOffset(swVertex &vNormal, float radius, float distance)
 {
-  vertex vOffset=vertex(0,0,0);
+  swVertex vOffset=swVertex(0,0,0);
   if(distance>0)
     {
       float distanceOver=radius-distance;

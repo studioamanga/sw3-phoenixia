@@ -10,6 +10,8 @@
 **                                                         **
 *************************************************************/
 
+#define SW3_VERSION 0.4
+
 // Inclusions génériques
 #include <stdlib.h>
 #include <stdio.h>
@@ -30,20 +32,27 @@ using namespace std;
 #define BEHIND      0
 #define INTERSECTS  1
 #define FRONT       2
-#define SCREEN_X    800
-#define SCREEN_Y    600
-char MAPURL[50];
-int MAPCLIMAT=1;
-#define WINGURL "./modelor/serv03.mad"
+
+int SCREEN_X    = 800;
+int SCREEN_Y    = 600;
+bool SCREEN_FULL= false;
+bool LOG=false;
+int NIV_DETAIL = 2;
+char MAPURL    [50] = "data/model/psanct.mad";
+char MAPCLIMAT      = '0';
+char WINGURL   [50] =  "data/model/shad.mad";
+#define FILE_TEXTURE_FONT "data/texture/font/base.tga"
 #define GETTIME glutGet(GLUT_ELAPSED_TIME)
-long int TIMElast, TIMEcur;
+long int TIMElast=0, TIMEcur=0;
 #define GETTIMER (TIMEcur-TIMElast)
 bool ISARB=true;
+bool VIEWEXT=true;
 
 #define FACT_ACCEL 0.001
 #define FACT_DECEL FACT_ACCEL*1.5
 #define FACT_BRAQ 0.01
 #define FACT_DEPL 0.003
+
 
 
 // Prototypes des fonctions principales
@@ -52,10 +61,23 @@ void Display(void);
 void Reshape(int,int);
 void Idle(void);
 void Keyboard(unsigned char key, int x, int y);
+void Special(int key, int x, int y);
 void KeyboardUp(unsigned char key, int x, int y);
 void Aff_map(void);
 int LoadBMP(char *File);
 void eXit(void);
+void InitJ(void);
+void DelJ(void);
+void logOut(char * str);
+char * getClimatName(char clim);
+int wideScr(bool upd=false, bool chg=false);
+void FinPartie(void);
+void SaveCfg(void);
+void LoadCfg(void);
+void setScore(void);
+char * getScore(int rank);
+void menuSetComment(char*str,int timeLong);
+void affPoint(float x, float y, float z, float rayon);
 
 
 // Déclarations des variables globales
@@ -66,21 +88,29 @@ bool LIGHTON=false;
 int Disp=DISP_MENU;
 
 // Inclusion des autres sources nécessaires au projet
-#include "timer.cpp"
+#include "input.hpp"
+#include "sound.cpp"
 #include "climat.cpp"
+#include "mod.cpp"
+#include "ava.cpp"
+#include "avaman.cpp"
 #include "except.cpp"
 #include "vector.cpp"
 #include "texture.cpp"
 #include "inout.cpp"
 #include "bsp.cpp"
+#include "weapon.hpp"
 //#include "part.cpp" est déclaré dans ent.cpp
 #include "ent.cpp"
 #include "drone.cpp"
 #include "ennemis.cpp"
 #include "serie.cpp"
+#include "weapon.cpp"
+#include "font.cpp"
+#include "menu.cpp"
+#include "jeu.cpp"
 #include "graph.cpp"
 #include "input.cpp"
 #include "maths.cpp"
-
-
-
+#include "cfg.cpp"
+#include "score.cpp"

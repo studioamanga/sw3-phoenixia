@@ -14,198 +14,199 @@
 
 class cl_shoker : public cl_drone
 {
-	protected :
-		// Destination
-		vertex dest;
-		// Etat ( 'M' : en mouvement ; 'A' : en attente )
-		char etat;
-		// Angle d'orientation
-		float angle;
-		// Indice d'effet
-		float effet;
-		// Vitesse de déplacement
-		int vit;
+protected :
+  // Destination
+  swVertex dest;
+  // Etat ( 'M' : en mouvement ; 'A' : en attente )
+  char etat;
+  // Angle d'orientation
+  float angle;
+  // Vitesse de déplacement
+  float vit;
+  float attente;
 
 
-		// Deplacement du Shoker
-		void deplacer(void);
-		// IA de l'attente afin de définir le prochain déplacement
-		void brainWait(void);
+  // Deplacement du Shoker
+  void deplacer(void);
+  // IA de l'attente afin de définir le prochain déplacement
+  void brainWait(void);
 
-	public :
+public :
 
-		cl_shoker(void);
-		cl_shoker(type_drone type, float x=0, float y=0, float z=0);
-		~cl_shoker(void);
+  cl_shoker(void);
+  cl_shoker(char * url, float x=0, float y=0, float z=0);
+  ~cl_shoker(void);
 
-		virtual void Erase(void);
-		virtual void Update(void);
-		virtual void afficher(cl_model * skin,float yOscil);
-		virtual void NewDrone(type_drone type, float x=0, float y=0, float z=0);
+  virtual void Erase(void);
+  virtual void Update(void);
+  virtual void afficher(cl_model * skin,float yOscil);
+  virtual void NewDrone(char * url, float x=0, float y=0, float z=0);
 
-
-	friend class cl_Serie;
+  friend class cl_Serie;
 };
 
-void cl_shoker::NewDrone(type_drone type, float x, float y, float z)
+void cl_shoker::NewDrone(char * url, float x, float y, float z)
 {
-	NEXT=new cl_shoker(type,x,y,z);
+  NEXT=new cl_shoker(url,x,y,z);
 
-
-	return;
+  return;
 }
 
 
-cl_shoker::cl_shoker(type_drone type, float x, float y, float z)
+cl_shoker::cl_shoker(char * url, float x, float y, float z)
 {
-	// Etat en attente
-	this->etat='A';
-	this->angle=0;
-	this->effet=type.effet;
+  // Etat en attente
+  this->etat='A';
+  this->angle=0;
+  this->attente=-100;
 
-	// Position et destination dans l'espace
-	this->pos->x=this->dest.x=x;
-	this->pos->y=this->dest.y=y;
-	this->pos->z=this->dest.z=z;
+  // Position et destination dans l'espace
+  this->pos->x=this->dest.x=x;
+  this->pos->y=this->dest.y=y;
+  this->pos->z=this->dest.z=z;
 
-	// Affectation de la vitesse
-	this->vit=type.vitesse;
+  // Affectation de la vitesse
+  this->vit=getRealFromMadShoker(url, 'V');
 
-	// Chainon précédent
-	//this->LAST=last;
+  // Chainon précédent
+  //this->LAST=last;
 }
 
 cl_shoker::cl_shoker(void)
 {
-	// Etat en attente
-	this->etat='A';
-	this->angle=0;
-	this->effet=-100;
+  // Etat en attente
+  this->etat='A';
+  this->angle=0;
+  this->attente=-100;
 
-	// Position et destination dans l'espace
-	this->pos->x=this->dest.x=0;
-	this->pos->y=this->dest.y=0;
-	this->pos->z=this->dest.z=0;
+  // Position et destination dans l'espace
+  this->pos->x=this->dest.x=0;
+  this->pos->y=this->dest.y=0;
+  this->pos->z=this->dest.z=0;
 
-	// Affectation de la vitesse
-	this->vit=3;
+  // Affectation de la vitesse
+  this->vit=1;
 }
 
 cl_shoker::~cl_shoker(void)
 {
-	NEXT=NULL;
+  NEXT=NULL;
 }
 
 // Affichage
 void cl_shoker::afficher(cl_model * skin, float yOscil=0)
 {
-	// Sauvegarde de la matrice courante
-	glPushMatrix();
-	// Translation vers les positions en x, y et z du shoker
-	glTranslated(this->getPos().x, this->getPos().y, this->getPos().z);
-	// Rotation d'attente
-	if(this->etat=='A')
-	{
-	         glRotated(this->angle,0,1,0);
-	}
-	// Affichage du model
-	skin->aff();
-	// Reprise de la matrice d'origine
-	glPopMatrix();
+  // Sauvegarde de la matrice courante
+  glPushMatrix();
+  // Translation vers les positions en x, y et z du shoker
+  glTranslated(this->getPos().x, this->getPos().y, this->getPos().z);
+  // Rotation d'attente
+  if(this->etat=='A')
+    {
+      glRotated(this->angle,0,1,0);
+    }
+  // Affichage du model
+  skin->aff();
+  // Reprise de la matrice d'origine
+  glPopMatrix();
 
-
-	return;
+  return;
 }
 
 
 void cl_shoker::Erase(void)
 {
-	return;
+  return;
 }
 
 
 // IA de l'attente afin de définir le prochain déplacement
 void cl_shoker::brainWait(void)
 {
-	if(this->effet<=0)
-	{
-		effet+=GETTIMER*0.005;
-	}
-	else
-	{
-		if(MapColl->explorer(fly->getPos(),this->getPos(),3))
-	      	{
-			effet=-50;
-		}
-		else
-		{
-			this->dest.x=fly->getPos().x;
-			this->dest.y=fly->getPos().y;
-			this->dest.z=fly->getPos().z;
-			this->etat='M';
-		}
-	}
+  this->angle+=GETTIMER*0.01;
+  if(this->angle>360) this->angle-=360;
 
-	this->angle+=GETTIMER*0.01;
-	if(this->angle>360) this->angle-=360;
+  if(cursMod==MOD_EXPLORATION)
+    return;
 
-	return;
+  if(this->attente<=0)
+    {
+      this->attente+=GETTIMER*0.005;
+    }
+  else
+    {
+      if(MapColl->explorer(fly->getPos(),this->getPos(),3))
+	{
+	  this->attente=-50;
+	}
+      else
+	{
+	  this->dest.x=fly->getPos().x;
+	  this->dest.y=fly->getPos().y;
+	  this->dest.z=fly->getPos().z;
+	  this->etat='M';
+	}
+    }
+
+  return;
 }
 
 
 void cl_shoker::deplacer(void)
 {
-	// On ne fait rien s'il n'est pas en déplacement
-	if(this->etat!='M')
-	{
-		if(this->etat=='A')
-			this->brainWait();
-		return;
-	}
+  // s'il s'agit d'une exploration, on le laisse en attente
+  if(cursMod==MOD_EXPLORATION)
+    this->etat='A';
 
-	// On se dirige vers la destination
-	if(this->pos->x<this->dest.x)
-	{
-		pos->x+=this->vit*GETTIMER*0.005;
-	}
-	if(this->pos->y<this->dest.y)
-	{
-		pos->y+=this->vit*GETTIMER*0.005;
-	}
-	if(this->pos->z<this->dest.z)
-	{
-		pos->z+=this->vit*GETTIMER*0.005;
-	}
-	if(this->pos->x>this->dest.x)
-	{
-		pos->x-=this->vit*GETTIMER*0.005;
-	}
-	if(this->pos->y>this->dest.y)
-	{
-		pos->y-=this->vit*GETTIMER*0.005;
-	}
-	if(this->pos->z>this->dest.z)
-	{
-		pos->z-=this->vit*GETTIMER*0.005;
-	}
+  // On ne fait rien s'il n'est pas en déplacement
+  if(this->etat!='M')
+    {
+      if(this->etat=='A')
+	this->brainWait();
+      return;
+    }
 
-	// Si on est arrivé on passe en mode 'attente'
-	if( this->pos->x+this->vit>this->dest.x && this->pos->x-this->vit<this->dest.x && this->pos->y+this->vit>this->dest.y &&this->pos->y-this->vit<this->dest.y &&this->pos->z+this->vit>this->dest.z &&this->pos->z-this->vit<this->dest.z)
-	{
-		this->etat='A';
-		this->effet=(fly->getPos().x-this->pos->x)+ (fly->getPos().y-this->pos->y)+(fly->getPos().z-this->pos->z);
+  // On se dirige vers la destination
+  if(this->pos->x<this->dest.x)
+    {
+      pos->x+=this->vit*GETTIMER*0.005;
+    }
+  if(this->pos->y<this->dest.y)
+    {
+      pos->y+=this->vit*GETTIMER*0.005;
+    }
+  if(this->pos->z<this->dest.z)
+    {
+      pos->z+=this->vit*GETTIMER*0.005;
+    }
+  if(this->pos->x>this->dest.x)
+    {
+      pos->x-=this->vit*GETTIMER*0.005;
+    }
+  if(this->pos->y>this->dest.y)
+    {
+      pos->y-=this->vit*GETTIMER*0.005;
+    }
+  if(this->pos->z>this->dest.z)
+    {
+      pos->z-=this->vit*GETTIMER*0.005;
+    }
 
-		if(this->effet<=0) this->effet=-this->effet;
-	}
+  // Si on est arrivé on passe en mode 'attente'
+  if( this->pos->x+this->vit>this->dest.x && this->pos->x-this->vit<this->dest.x && this->pos->y+this->vit>this->dest.y &&this->pos->y-this->vit<this->dest.y &&this->pos->z+this->vit>this->dest.z &&this->pos->z-this->vit<this->dest.z)
+    {
+      this->etat='A';
+      this->attente=(fly->getPos().x-this->pos->x)+ (fly->getPos().y-this->pos->y)+(fly->getPos().z-this->pos->z);
+      if(this->attente<=0) this->attente=-this->attente;
+    }
 
-	return;
+  return;
 }
 
 void cl_shoker::Update()
 {
 	// On remet à jour le déplacement
 	this->deplacer();
-
 
 	return;
 }

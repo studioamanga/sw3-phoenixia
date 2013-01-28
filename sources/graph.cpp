@@ -20,6 +20,13 @@ float VIEWa1=0,VIEWa2=0,VIEWz=1;
 #include "graphm.cpp"
 #include "graphj.cpp"
 
+void logOut(char * str)
+{
+  if(LOG==true)
+    printf(str);
+  return;
+}
+
 // Constructeur
 cl_model::cl_model(char * file, char shape, float Rext, float Rint, int resol, char loadtype)
 {
@@ -28,6 +35,7 @@ cl_model::cl_model(char * file, char shape, float Rext, float Rint, int resol, c
       // Space ( universe )
       if(shape=='U')
 	{
+	  resol*=NIV_DETAIL;
 	  this->nb_objet=1;
 	  this->anim='0';
 	  this->texture=new cl_texture*[this->nb_objet];
@@ -90,6 +98,7 @@ cl_model::cl_model(char * file, char shape, float Rext, float Rint, int resol, c
       // Shield
       if(shape=='S')
 	{
+	  resol*=NIV_DETAIL;
 	  this->nb_objet=1;
 	  this->anim='0';
 	  this->texture=new cl_texture*[this->nb_objet];
@@ -114,6 +123,39 @@ cl_model::cl_model(char * file, char shape, float Rext, float Rint, int resol, c
 	  glEnd();
 	  glEndList();
 	}
+      // Reacteurs
+      if(shape=='R')
+	{
+	  char *urlget=getStrFromMadWing(file, 'R');
+	  this->nb_objet=1;
+	  this->anim='0';
+	  this->texture=new cl_texture*[this->nb_objet];
+	  this->skin=new int[this->nb_objet];
+	  this->skin[0]=glGenLists(1);
+	  this->texture[0]=new cl_texture(urlget);
+	  delete urlget;
+	  int nbReacteurs=getNbFromMadWing(file, 'R');
+	  glNewList(this->skin[0],GL_COMPILE);
+
+	  if(ISARB)
+	    {
+	      glEnable (GL_POINT_SPRITE_ARB);
+	      glTexEnvf (GL_POINT_SPRITE_ARB, GL_COORD_REPLACE_ARB, GL_TRUE);
+	      glBegin (GL_POINTS);
+	    }
+	  else
+	    glBegin(GL_QUADS);
+
+	  for(int i=0 ; i<nbReacteurs ; i++)
+	    {
+	      affPoint(getRealFromMadWing(file,'r',i,0),
+		       getRealFromMadWing(file,'r',i,1),
+		       getRealFromMadWing(file,'r',i,2),
+		       getRealFromMadWing(file,'r',i,3));
+	    }
+	  glEnd();
+	  glEndList();
+	}
     }
   else
     {
@@ -123,7 +165,7 @@ cl_model::cl_model(char * file, char shape, float Rext, float Rint, int resol, c
 
       unsigned char id;
       fread(&id,sizeof(unsigned char),1,fOut);
-      if(id!=136) printf("Type de model erroné !\n");
+      if(id!=136) logOut("Type de model erroné !\n");
 
       fseek(fOut, sizeof(int), SEEK_CUR);
 
@@ -151,39 +193,68 @@ cl_model::cl_model(char * file, char shape, float Rext, float Rint, int resol, c
 	    {
 	      fseek(fOut,sizeof(int),SEEK_CUR);
 	      int Rext, resol;
-	      float fRext, fresol, fTex;
+	      float fRext, fresol, fTex, nbStars;
 	      fread(&fRext,sizeof(float),1,fOut);
 	      fread(&fresol,sizeof(float),1,fOut);
 	      fread(&fTex,sizeof(float),1,fOut);
-	      fseek(fOut,sizeof(float)*2,SEEK_CUR);
+	      fread(&nbStars,sizeof(float),1,fOut);
+	      fseek(fOut,sizeof(float),SEEK_CUR);
 
 	      Rext=int(fRext);
 	      resol=int(fresol);
+	      resol*=NIV_DETAIL;
 
-	      glBegin(GL_QUADS);
-	      float angy=-(PI/2);
-	      for(int re=0 ; re<=(resol/2) ; re++)
+	      if(fTex!=0)
 		{
-		  float angx=0;
-		  for(int Re=0 ; Re<resol ; Re++)
+		  glBegin(GL_QUADS);
+		  float angy=-(PI/2);
+		  for(int re=0 ; re<=(resol/2) ; re++)
 		    {
-		      glTexCoord2f( angx/(2*PI)*fTex, (angy+PI/2)/PI*fTex);
-		      glVertex3f( cos(angx)*Rext*cos(angy), sin(angy)*Rext, sin(angx)*Rext*cos(angy));
-		      angx+=((2*PI)/resol);
-		      glTexCoord2f( angx/(2*PI)*fTex, (angy+PI/2)/PI*fTex);
-		      glVertex3f( cos(angx)*Rext*cos(angy), sin(angy)*Rext, sin(angx)*Rext*cos(angy));
+		      float angx=0;
+		      for(int Re=0 ; Re<resol ; Re++)
+			{
+			  glTexCoord2f( angx/(2*PI)*fTex, (angy+PI/2)/PI*fTex);
+			  glVertex3f( cos(angx)*Rext*cos(angy), sin(angy)*Rext, sin(angx)*Rext*cos(angy));
+			  angx+=((2*PI)/resol);
+			  glTexCoord2f( angx/(2*PI)*fTex, (angy+PI/2)/PI*fTex);
+			  glVertex3f( cos(angx)*Rext*cos(angy), sin(angy)*Rext, sin(angx)*Rext*cos(angy));
+			  angy+=((2*PI)/resol);
+			  glTexCoord2f( angx/(2*PI)*fTex, (angy+PI/2)/PI*fTex);
+			  glVertex3f( cos(angx)*Rext*cos(angy), sin(angy)*Rext, sin(angx)*Rext*cos(angy));
+			  angx-=((2*PI)/resol);
+			  glTexCoord2f( angx/(2*PI)*fTex, (angy+PI/2)/PI*fTex);
+			  glVertex3f( cos(angx)*Rext*cos(angy), sin(angy)*Rext, sin(angx)*Rext*cos(angy));
+			  angx+=((2*PI)/resol);
+			  angy-=((2*PI)/resol);
+			}
 		      angy+=((2*PI)/resol);
-		      glTexCoord2f( angx/(2*PI)*fTex, (angy+PI/2)/PI*fTex);
-		      glVertex3f( cos(angx)*Rext*cos(angy), sin(angy)*Rext, sin(angx)*Rext*cos(angy));
-		      angx-=((2*PI)/resol);
-		      glTexCoord2f( angx/(2*PI)*fTex, (angy+PI/2)/PI*fTex);
-		      glVertex3f( cos(angx)*Rext*cos(angy), sin(angy)*Rext, sin(angx)*Rext*cos(angy));
-		      angx+=((2*PI)/resol);
-		      angy-=((2*PI)/resol);
 		    }
-		  angy+=((2*PI)/resol);
+		  glEnd();
 		}
-	      glEnd();
+	      if(nbStars!=0)
+		{
+		  glDisable(GL_TEXTURE_2D);
+		  glBegin(GL_POINTS);
+		  int iColor=int(nbStars/6);
+		  Rext-=100;
+		  for(int iStar=0 ; iStar<int(nbStars) ; iStar++)
+		    {
+		      float a1=RandFloat(-M_PI,M_PI), a2=RandFloat(-M_PI,M_PI);
+		      if(iColor==0)
+			{
+			  float cR=(iStar/nbStars/2)+0.5;
+			  glColor3f(cR,cR,cR);
+			  iColor=int(nbStars/6);
+			}
+		      glVertex3f(cos(a1)*cos(valAbs(a2))*Rext,
+				 sin(a2)*Rext,
+				 -sin(a1)*cos(valAbs(a2))*Rext);
+		      iColor--;
+		    }
+		  glEnd();
+		  glColor3f(1,1,1);
+		  glEnable(GL_TEXTURE_2D);
+		}
 	      glEndList();
 	    }
 	  else
@@ -208,8 +279,8 @@ cl_model::cl_model(char * file, char shape, float Rext, float Rint, int resol, c
 
 
 	      int quad=0;
-	      float x1,y1,z1,tx1,ty1;
-	      float x3,y3,z3,tx3,ty3;
+	      float x1=0,y1=0,z1=0,tx1=0,ty1=0;
+	      float x3=0,y3=0,z3=0,tx3=0,ty3=0;
       
 	      for(int y=0 ; y<nb_vert ; y++)
 		{
@@ -251,7 +322,7 @@ cl_model::cl_model(char * file, char shape, float Rext, float Rint, int resol, c
 	      glEndList();
 	    }
 	}
-      printf("  [OK] Model chargé (%d objets, %d vertices, file : '%s')\n", this->nb_objet,nbVertices,file);
+      //logOut("  [OK] Model chargé (%d objets, %d vertices, file : '%s')\n", this->nb_objet,nbVertices,file);
       fclose (fOut);
     }
 
@@ -283,7 +354,7 @@ bool cl_model::aff(void)
       this->texture[1]->setTexture();
       glCallList(this->skin[1]);
 
-      angle +=0.01*GETTIMER;
+      angle +=0.02*GETTIMER;
       if(angle>360)
 	angle-=360;
       
@@ -291,8 +362,9 @@ bool cl_model::aff(void)
     case 'M' :
       // Sauvegarde de la matrice courante
       glPushMatrix();
-      // Translation vers les positions en x, y et z du vaisseau
-      glTranslated(fly->getPos().x,fly->getPos().y,fly->getPos().z);
+      if(fly)
+	// Translation vers les positions en x, y et z du vaisseau
+	glTranslated(fly->getPos().x,fly->getPos().y,fly->getPos().z);
       this->texture[0]->setTexture();
       glCallList(this->skin[0]);
       glPopMatrix();
@@ -322,9 +394,16 @@ void Init(void)
     {
       // L'extension GL_ARB_point_sprite n'est pas supporté 
       ISARB=false;
-      fprintf (stderr, " [!] L'extension OpenGL 'GL_ARB_point_sprite', n'est pas supporté ...\n");
-      fprintf (stderr, " [!] Veuillez installer les derniers pilotes de votre carte graphique.\n");
+      logOut(" [!] L'extension OpenGL 'GL_ARB_point_sprite', n'est pas supporté ...\n");
+      logOut(" [!] Veuillez installer les derniers pilotes de votre carte graphique.\n");
     }
+
+  
+  Particule= new ParticuleManager;
+  logOut("  [OK] Moteur à Particule initialisé\n");
+
+  clSoundMan::Create();
+  logOut("  [OK] Son initialisé\n");
 
   // Activation du test de profondeur
   glEnable(GL_DEPTH_TEST);
@@ -337,6 +416,9 @@ void Init(void)
       glEnable(GL_LIGHT0);
     }
 
+  clAvaMan::Create();
+  logOut("  [OK] Manager d'Avatar initialisé\n");
+
   switch(Disp)
     {
     case DISP_JEU :
@@ -346,6 +428,11 @@ void Init(void)
       InitM();
       break;
     }
+
+  // Chargement de la configuration
+  LoadCfg();
+
+  srand(GETTIME);
 
   return;
 }
@@ -396,20 +483,86 @@ void Idle(void)
 
 void PerspectiveMode(void)
 {
-        glMatrixMode(GL_PROJECTION);
-	glPopMatrix();
-	glMatrixMode(GL_MODELVIEW);
+  glMatrixMode(GL_PROJECTION);
+  glPopMatrix();
+  glMatrixMode(GL_MODELVIEW);
 }
 
 void OrthoMode(int left, int top, int right, int bottom)
 {
-        glMatrixMode(GL_PROJECTION);
-	glPushMatrix();
-	glLoadIdentity();
-	glOrtho(left,right,bottom,top,0,1);
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity();
-	
-	return;
+  glMatrixMode(GL_PROJECTION);
+  glPushMatrix();
+  glLoadIdentity();
+  glOrtho(left,right,bottom,top,0,1);
+  glMatrixMode(GL_MODELVIEW);
+  glLoadIdentity();
+
+  //SCREEN_X=right-left;
+  //SCREEN_Y=bottom-top;
+
+  return;
 }
 
+int wideScr(bool upd, bool chg)
+{
+  static float wide=0;
+  static bool sens=false;
+
+  if( menuCommentTime>0 && wide==0)
+    sens=true;
+  if( menuCommentTime<=0 && wide>0)
+    sens=false;
+
+  if(chg)
+    sens=!sens;
+
+  if(upd)
+    {
+      if(!sens && wide>0)
+	wide-=GETTIMER*0.025;
+      if(sens && wide<100)
+	wide+=GETTIMER*0.025;
+
+      if(wide<0)
+	wide=0;
+      if(wide>100)
+	wide=100;
+    }
+
+  return int(wide);
+}
+
+void affPoint(float x, float y, float z, float rayon)
+{
+  if(ISARB)
+    {
+      glVertex3f (x, y, z);
+      return;
+    }
+  glTexCoord2f(0.0,0.0 );
+  glVertex3f(x-rayon, y-rayon, z);
+  glTexCoord2f(0.0,1.0 );
+  glVertex3f(x-rayon, y+rayon, z);
+  glTexCoord2f(1.0,1.0 );
+  glVertex3f(x+rayon, y+rayon, z);
+  glTexCoord2f(1.0,0.0 );
+  glVertex3f(x+rayon, y-rayon, z);
+
+  glVertex3f(x-rayon, y, z-rayon);
+  glTexCoord2f(1.0,1.0 );
+  glVertex3f(x-rayon, y, z+rayon);
+  glTexCoord2f(0.0,1.0 );
+  glVertex3f(x+rayon, y, z+rayon);
+  glTexCoord2f(0.0,0.0 );
+  glVertex3f(x+rayon, y, z-rayon);
+
+  glVertex3f(x, y-rayon, z-rayon);
+  glTexCoord2f(0.0,1.0 );
+  glVertex3f(x, y+rayon, z-rayon);
+  glTexCoord2f(1.0,1.0 );
+  glVertex3f(x, y+rayon, z+rayon);
+  glTexCoord2f(1.0,0.0 );
+  glVertex3f(x, y-rayon, z+rayon);
+
+  return;
+}

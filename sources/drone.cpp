@@ -38,8 +38,6 @@ class cl_crystal : public cl_drone
 	protected :
 		// Angle d'orientation
 		float angle;
-		// Indice d'effet
-		short effet;
 		
 
 		// Deplacement du Crystal
@@ -50,30 +48,29 @@ class cl_crystal : public cl_drone
 	public :
 
 		cl_crystal(void);
-		cl_crystal(type_drone type, float x=0, float y=0, float z=0);
+		cl_crystal(char * url, float x=0, float y=0, float z=0);
 		~cl_crystal(void);
 
 		virtual void Erase(void);
 		virtual void Update(void);
 		virtual void afficher(cl_model * skin,float yOscil);
-		virtual void NewDrone(type_drone type, float x=0, float y=0, float z=0);
+		virtual void NewDrone(char * url, float x=0, float y=0, float z=0);
 
 
 	friend class cl_Serie;
 };
 
-void cl_crystal::NewDrone(type_drone type, float x, float y, float z)
+void cl_crystal::NewDrone(char * url, float x, float y, float z)
 {
-	NEXT=new cl_crystal(type,x,y,z);
+	NEXT=new cl_crystal(url,x,y,z);
 
 	return;
 }
 
 
-cl_crystal::cl_crystal(type_drone type, float x, float y, float z)
+cl_crystal::cl_crystal(char * url, float x, float y, float z)
 {
 	this->angle=0;
-	this->effet=type.effet;
 
 	// Position et destination dans l'espace
 	this->pos->x=x;
@@ -87,7 +84,6 @@ cl_crystal::cl_crystal(type_drone type, float x, float y, float z)
 cl_crystal::cl_crystal(void)
 {
 	this->angle=0;
-	this->effet=0;
 
 	// Position et destination dans l'espace
 	this->pos->x=0;

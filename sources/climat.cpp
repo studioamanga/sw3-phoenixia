@@ -122,6 +122,7 @@ float cl_climat::getFogBack(void)
 cl_climat::cl_climat(float merB, float merBmin, float merBmax, char type)
 {
   Type=type;
+  clSoundMan * Sound=clSoundMan::Create();
 
   switch(type)
     {
@@ -208,6 +209,9 @@ cl_climat::cl_climat(float merB, float merBmin, float merBmax, char type)
        this->r=this->rBegin=this->rEnd=0.09;
        this->g=this->gBegin=this->gEnd=0.2;
        this->b=this->bBegin=this->bEnd=0.9;
+
+       Sound->JouerStream (SOUND_RAIN, CANAL_ENV, true);
+       FSOUND_SetVolume(CANAL_ENV, VOLUME_MOYEN);
       break;
 
     case CLIMAT_CRUE :
@@ -222,6 +226,9 @@ cl_climat::cl_climat(float merB, float merBmin, float merBmax, char type)
        this->r=this->rBegin=this->rEnd=0.09;
        this->g=this->gBegin=this->gEnd=0.2;
        this->b=this->bBegin=this->bEnd=0.59;
+
+       Sound->JouerStream (SOUND_RAIN, CANAL_ENV, true);
+       FSOUND_SetVolume(CANAL_ENV, VOLUME_FAIBLE);
       break;
 
     case CLIMAT_TEMPETE :
@@ -237,6 +244,8 @@ cl_climat::cl_climat(float merB, float merBmin, float merBmax, char type)
        this->g=this->gBegin=this->gEnd=0.586;
        this->b=this->bBegin=this->bEnd=0.69;
 
+       Sound->JouerStream (SOUND_THUNDER, CANAL_ENV, true);
+       FSOUND_SetVolume(CANAL_ENV, VOLUME_FORT);
       break;
 
     case CLIMAT_NEIGE :
@@ -246,11 +255,14 @@ cl_climat::cl_climat(float merB, float merBmin, float merBmax, char type)
 
        this->fogBegin=this->fog=this->fogEnd=100;
 
-       this->pluieBegin=this->pluie=this->pluieEnd=0;
+       this->pluieBegin=this->pluie=this->pluieEnd=10;
 
        this->r=this->rBegin=this->rEnd=1.0;
        this->g=this->gBegin=this->gEnd=1.0;
        this->b=this->bBegin=this->bEnd=1.0;
+
+       Sound->JouerStream (SOUND_WIND, CANAL_ENV, true);
+       FSOUND_SetVolume(CANAL_ENV, VOLUME_MOYEN);
       break;
 
     case CLIMAT_NUIT :
@@ -279,6 +291,9 @@ cl_climat::cl_climat(float merB, float merBmin, float merBmax, char type)
        this->r=this->rBegin=this->rEnd=1.0;
        this->g=this->gBegin=this->gEnd=0.86;
        this->b=this->bBegin=this->bEnd=0.359;
+
+       Sound->JouerStream (SOUND_WIND, CANAL_ENV, true);
+       FSOUND_SetVolume(CANAL_ENV, VOLUME_FAIBLE);
       break;
 
     default :
@@ -301,3 +316,47 @@ cl_climat::~cl_climat(void)
 {
 }
 
+char * getClimatName(char clim)
+{
+  char * typeC=new char[15];
+  switch(clim)
+    {
+    case 'T' :
+      strcpy(typeC,"Tempete");
+      break;
+    case 'S' :
+      strcpy(typeC,"Sable");
+      break;
+    case 'n' :
+      strcpy(typeC,"Neige");
+      break;
+    case 'C' :
+      strcpy(typeC,"Crue");
+      break;
+    case 'I' :
+      strcpy(typeC,"Innondation");
+      break;
+    case 's' :
+      strcpy(typeC,"Secheresse");
+      break;
+    case 'A' :
+      strcpy(typeC,"Aube");
+      break;
+    case 'E' :
+      strcpy(typeC,"Espace");
+      break;
+    case 'c' :
+      strcpy(typeC,"Crepuscule");
+      break;
+    case 'e' :
+      strcpy(typeC,"Enfer");
+      break;
+    case 'N' :
+      strcpy(typeC,"Nuit");
+      break;
+    default :
+      strcpy(typeC,"Normal");
+    }
+
+  return typeC;
+}

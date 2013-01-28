@@ -28,20 +28,6 @@ float getMaxY(Cvf F [], int nbF);
 
 
 
-struct mapDetail
-{
-  char nom[30];
-  char name[20];
-  char comment[100];
-  int nbClimat;
-  char * tabClimat;
-  mapDetail * NEXT;
-  mapDetail * BACK;
-};
-
-mapDetail * mapDetailLast=NULL;
-
-
 // Structure des noeuds de l'arbre BSP
 class noeud
 {
@@ -110,21 +96,27 @@ public :
   bool IsRight(float pZ);
   bool IsLeft(float pZ);
   // Données relatives au temps
-  float TIMEmax;
-  float TIMEactu;
+  float TIMEmax, TIMEactu;
   // Crystals
   int TotalCrystals, NbCrystals;
   void TIMEupdate(void);
+  bool isFinish(void);
   // Permet de situer un vertex dans l'arbre et de tester les faces
-  bool explorer(vertex p, vertex pOld, float rayon);
+  bool explorer(swVertex p, swVertex pOld, float rayon);
   // Test d'un noeud pour l'exploration
-  bool testNoeud(int id, vertex p, vertex pOld, float rayon);
+  bool testNoeud(int id, swVertex p, swVertex pOld, float rayon);
+  // Test d'un noeud pour l'exploration des balles
+  float testNoeudDist(int id, swVertex & vPos, swVertex & vDist);
   // Test de la collision
-  bool test(vertex p, vertex pOld, float rayon, int target);
+  bool test(swVertex p, swVertex pOld, float rayon, int target);
+  // Test de la collision pour les balles
+  float testDist(swVertex & vPos, swVertex & vDest, int target);
   // Segmenter un noeud
   bool segmentNoeud(int id, char Axe, float Min, float Max);
   // Aff Liquid
   void affLiquid(void);
+  // Pour les balles
+  float bulletDistMur(swVertex & vPos, swVertex & vDest);
   // Constructeur
   cl_bsp(char * name);
   // Destructeur
@@ -132,6 +124,101 @@ public :
   
   friend class cl_wing;
 };
+
+float cl_bsp::bulletDistMur(swVertex & vPos, swVertex & vDest)
+{
+  return this->testNoeudDist(1,vPos,vDest);
+}
+
+// Test d'un noeud pour l'exploration des balles et renvoie la distance du mur le plus proche
+float cl_bsp::testNoeudDist(int id, swVertex & vPos, swVertex & vDest)
+{
+  int target=1;
+  if(this->Noeud[id]->axe!='0')
+    {
+      if(this->Noeud[id]->axe=='x')
+	{
+	  if(vPos.x<this->Noeud[id]->med && vDest.x<this->Noeud[id]->med)
+	    target=id*2;
+	  else
+	    {
+	      if(vPos.x>this->Noeud[id]->med && vDest.x>this->Noeud[id]->med)
+		target=(id*2)+1;
+	      else
+		target=-99;
+	    }
+	}
+      if(this->Noeud[id]->axe=='y')
+	{
+	  if(vPos.y<this->Noeud[id]->med && vDest.y<this->Noeud[id]->med)
+	    target=id*2;
+	  else
+	    {
+	      if(vPos.y>this->Noeud[id]->med && vDest.y>this->Noeud[id]->med)
+		target=(id*2)+1;
+	      else
+		target=-99;
+	    }
+	}
+      if(this->Noeud[id]->axe=='z')
+	{
+	  if(vPos.z<this->Noeud[id]->med && vDest.z<this->Noeud[id]->med)
+	    target=id*2;
+	  else
+	    {
+	      if(vPos.z>this->Noeud[id]->med && vDest.z>this->Noeud[id]->med)
+		target=(id*2)+1;
+	      else
+		target=-99;
+	    }
+	}
+      // Si la destination est simple...
+      if(target!=-99)
+	{
+	  return this->testNoeudDist(target,vPos, vDest);
+	}
+      // Si la destination est double
+      else
+	{
+	  float minDist;
+	  minDist=minFloat(this->testNoeudDist(id*2, vPos, vDest), this->testNoeudDist((id*2)+1, vPos, vDest));
+	  return minDist;
+	}
+    }
+  else
+    {
+      return this->testDist(vPos, vDest, id);
+    }
+
+  return (INF_THEO);
+}
+
+// Test de la collision pour les balles
+float cl_bsp::testDist(swVertex & vPos, swVertex & vDest, int target)
+{
+  float resultMin=INF_THEO;
+  swVertex vLine[2];
+  vLine[0].x=vPos.x;
+  vLine[0].y=vPos.y;
+  vLine[0].z=vPos.z;
+  vLine[1].x=vDest.x;
+  vLine[1].y=vDest.y;
+  vLine[1].z=vDest.z;
+
+  for(int y=0 ; y<Noeud[target]->nb_face ; y++)
+    {
+      float result;
+
+      result=IntersectedPolygonDist(Noeud[target]->face[y].t, vLine, 3);
+      if(result!=(INF_THEO))
+	{
+	  resultMin=minFloat(resultMin, result);
+	}
+    }
+
+  return resultMin;
+}
+
 
 float cl_bsp::getSizeX(void)
 {
@@ -184,92 +271,88 @@ bool cl_bsp::IsLeft(float pZ)
 
 void cl_bsp::TIMEupdate(void)
 {
-  this->TIMEactu+=(GETTIMER/1000);
+  this->TIMEactu+=(GETTIMER);
 
   return;
 }
 
-// Test d'un noeud pour l'exploration
-bool cl_bsp::testNoeud(int id, vertex p, vertex pOld, float rayon)
+bool cl_bsp::isFinish(void)
 {
-	int target=1;
-	if(this->Noeud[id]->axe!='0')
-	{
-		if(this->Noeud[id]->axe=='x')
-		{
-			if(p.x<this->Noeud[id]->med&&pOld.x<this->Noeud[id]->med)
-				target=id*2;
-			else
-			{
-				if(p.x>this->Noeud[id]->med&&pOld.x>this->Noeud[id]->med)
-				{
-					target=(id*2)+1;
-				}
-				else
-				{
-					target=-99;
-				}
-			}
-		}
-		if(this->Noeud[id]->axe=='y')
-		{
-			if(p.y<this->Noeud[id]->med&&pOld.y<this->Noeud[id]->med)
-				target=id*2;
-			else
-			{
-				if(p.y>this->Noeud[id]->med&&pOld.y>this->Noeud[id]->med)
-				{
-					target=(id*2)+1;
-				}
-				else
-				{
-					target=-99;
-				}
-			}
-		}
-		if(this->Noeud[id]->axe=='z')
-		{
-			if(p.z<this->Noeud[id]->med&&pOld.z<this->Noeud[id]->med)
-				target=id*2;
-			else
-			{
-				if(p.z>this->Noeud[id]->med&&pOld.z>this->Noeud[id]->med)
-				{
-					target=(id*2)+1;
-				}
-				else
-				{
-					target=-99;
-				}
-			}
-		}
-		// Si la destination est simple...
-		if(target!=-99)
-		{
-			if(this->testNoeud(target,p,pOld,rayon)==true)
-				return true;
-		}
-		// Si la destination est double
-		else
-		{
-			if(this->testNoeud(id*2,p,pOld,rayon)==true)
-				return true;
-			if(this->testNoeud((id*2)+1,p,pOld,rayon)==true)
-				return true;
-		}
+  if(this->TIMEactu > this->TIMEmax)
+    return true;
 
-	}
-	else
-	{
-		if(this->test(p,pOld,rayon,id)==true)
-			return true;
-	}
+  return false;
+}
 
-	return false;
+
+// Test d'un noeud pour l'exploration
+bool cl_bsp::testNoeud(int id, swVertex p, swVertex pOld, float rayon)
+{
+  int target=1;
+  if(this->Noeud[id]->axe!='0')
+    {
+      if(this->Noeud[id]->axe=='x')
+	{
+	  if(p.x<this->Noeud[id]->med&&pOld.x<this->Noeud[id]->med)
+	    target=id*2;
+	  else
+	    {
+	      if(p.x>this->Noeud[id]->med&&pOld.x>this->Noeud[id]->med)
+		target=(id*2)+1;
+	      else
+		target=-99;
+	    }
+	}
+      if(this->Noeud[id]->axe=='y')
+	{
+	  if(p.y<this->Noeud[id]->med&&pOld.y<this->Noeud[id]->med)
+	    target=id*2;
+	  else
+	    {
+	      if(p.y>this->Noeud[id]->med&&pOld.y>this->Noeud[id]->med)
+		target=(id*2)+1;
+	      else
+		target=-99;
+	    }
+	}
+      if(this->Noeud[id]->axe=='z')
+	{
+	  if(p.z<this->Noeud[id]->med&&pOld.z<this->Noeud[id]->med)
+	    target=id*2;
+	  else
+	    {
+	      if(p.z>this->Noeud[id]->med&&pOld.z>this->Noeud[id]->med)
+		target=(id*2)+1;
+	      else
+		target=-99;
+	    }
+	}
+      // Si la destination est simple...
+      if(target!=-99)
+	{
+	  if(this->testNoeud(target,p,pOld,rayon)==true)
+	    return true;
+	}
+      // Si la destination est double
+      else
+	{
+	  if(this->testNoeud(id*2,p,pOld,rayon)==true)
+	    return true;
+	  if(this->testNoeud((id*2)+1,p,pOld,rayon)==true)
+	    return true;
+	}
+    }
+  else
+    {
+      if(this->test(p,pOld,rayon,id)==true)
+	return true;
+    }
+
+  return false;
 }
 
 // Permet de situer un vertex dans l'arbre et de tester les faces
-bool cl_bsp::explorer(vertex p, vertex pOld, float rayon)
+bool cl_bsp::explorer(swVertex p, swVertex pOld, float rayon)
 {
 	return this->testNoeud(1,p,pOld,rayon);
 }
@@ -503,7 +586,7 @@ bool cl_bsp::segmentNoeud(int id, char Axe, float Min, float Max)
 
 
 // Test de la collision
-bool cl_bsp::test(vertex p, vertex pOld, float rayon, int target)
+bool cl_bsp::test(swVertex p, swVertex pOld, float rayon, int target)
 {
   for(int y=0 ; y<Noeud[target]->nb_face ; y++)
 	{
@@ -511,7 +594,7 @@ bool cl_bsp::test(vertex p, vertex pOld, float rayon, int target)
 		{
 			return true;
 		}
-		vertex vLine[2];
+		swVertex vLine[2];
 		vLine[0].x=p.x;
 		vLine[0].y=p.y;
 		vLine[0].z=p.z;
@@ -530,9 +613,18 @@ bool cl_bsp::test(vertex p, vertex pOld, float rayon, int target)
 // Constructeur qui prend comme argument le nom du fichier
 cl_bsp::cl_bsp(char * name)
 {
-
-  this->TIMEmax=1000;
   this->TIMEactu=0;
+
+  switch(cursMod)
+    {
+    case MOD_DEFI :
+      this->TIMEmax=MOD_DEFI_MISSIONS[cursDefiMission-1].duree*1000;
+      break;
+    case MOD_EXPLORATION :
+    default :
+      this->TIMEmax=5000*1000;
+    }
+
   // Initialisation nulle de l'arbre
   nb_noeud=0;
   Noeud=NULL;
@@ -542,7 +634,7 @@ cl_bsp::cl_bsp(char * name)
   FILE* fIn=fopen(name,"r");
   if(fIn==NULL)
     {
-      printf("Echec lors de la création du BSP :\nModel inexistant\n");
+      logOut("Echec lors de la création du BSP :\nModel inexistant\n");
     }
   else
     {
@@ -551,7 +643,7 @@ cl_bsp::cl_bsp(char * name)
       fread(&id,sizeof(unsigned char),1,fIn);
       if(id!=136)
 	{
-	  printf("Echec lors de la création du BSP :\nModel incorrect\n");
+	  logOut("Echec lors de la création du BSP :\nModel incorrect\n");
 	  return;
 	}
       fseek(fIn,sizeof(int)+sizeof(char),SEEK_CUR);
@@ -650,7 +742,7 @@ cl_bsp::cl_bsp(char * name)
 			  fread(&(Noeud[1]->face[p].t[2].z),sizeof(float),1,fIn);
 			  fseek(fIn,sizeof(float)*2,SEEK_CUR);
 			  t=1;
-			  printf("Attention : incompatibilité de format lors de la création de l'arbre BSP !\n");
+			  logOut("Attention : incompatibilité de format lors de la création de l'arbre BSP !\n");
 			}
 		    }
 		  else
@@ -718,12 +810,10 @@ cl_bsp::cl_bsp(char * name)
       float liq=getRealFromMadMap(MAPURL, 'L',1);
       float liqmin=getRealFromMadMap(MAPURL, 'L',2);
       float liqmax=getRealFromMadMap(MAPURL, 'L',3);
-      char * cType=getStrFromMadMap(MAPURL,'C',MAPCLIMAT);
 
-      this->Climat=new cl_climat(liq,liqmin,liqmax,*cType);
-      delete cType;
+      this->Climat=new cl_climat(liq,liqmin,liqmax,MAPCLIMAT);
 
-      printf("  [OK] Construction de l'arbre BSP réussie (%d noeuds)\n",nb_noeud);
+      logOut("  [OK] Construction de l'arbre BSP réussie (x noeuds)\n");//,nb_noeud);
     }
 }
 

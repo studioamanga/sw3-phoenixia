@@ -87,7 +87,7 @@ class ErrFile
 ErrFile::ErrFile(char*urlerr)
 {
 	strcpy(this->url,urlerr);
-	printf("[!] Alerte : Fichier '%s' inexistant ou éroné\n",urlerr);
+	logOut("[!] Alerte : Fichier '%s' inexistant ou éroné\n");//,urlerr);
 }
 
 ErrFile::~ErrFile(void)
