@@ -11,6 +11,25 @@
 **                                                         **
 *************************************************************/
 
+// Recherche d'un nombre alléatoire flottant
+float RandFloat (float fMin, float fMax)
+{
+	return (rand () / (float)RAND_MAX * (fMax - fMin)) + fMin;
+}
+
+// Recherche d'un nombre alléatoire entier
+int RandInt (int iMin, int iMax)
+{
+	return (int)(rand () / (float)RAND_MAX * (iMax - iMin)) + iMin;
+}
+
+
+typedef struct vertexPol
+{
+  float aDir, aInclin;
+  float rayon;
+};
+
 typedef struct vertex
 {
 public:
@@ -49,6 +68,14 @@ public:
 	float x,y,z;
 };
 
+void operator % ( vertex v1, vertex v2 )
+{
+	v1.x=v2.x;
+	v1.y=v2.y;
+	v1.z=v2.z;
+
+	return;
+}
 
 //  This returns a perpendicular vector from 2 given vectors by taking the cross product.
 vertex Cross(vertex vVector1, vertex vVector2);
@@ -104,6 +131,8 @@ bool EdgeSphereCollision(vertex &vCenter,
 // and radius of the sphere.
 bool SpherePolygonCollision(vertex vPolygon[],
                             vertex &vCenter, int vertexCount, float radius);
+
+vertex GetCollisionOffset(vertex &vNormal, float radius, float distance);
 
 
 float valAbs(float x)	//**** Retourne la valeur absolue d'un float ****//
@@ -232,5 +261,5 @@ vecteur::~vecteur(void)
 // Collision vertex format
 typedef struct Cvf
 {
-	vertex t[4];
+	vertex t[3];
 };

@@ -9,7 +9,7 @@
 **                                                         **
 *************************************************************/
 
-// Fonction d'initialisation des models
+// Fonction d'initialisation des models ( declasse )
 void Init_Models(void)
 {
 	// Allocution des id pour chaque model

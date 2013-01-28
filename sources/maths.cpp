@@ -87,7 +87,7 @@ vertex Normal(vertex vPolygon[])
 /////   This returns the distance between a plane and the origin
 /////
 /////////////////////////////////// PLANE DISTANCE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
-                                    
+
 float PlaneDistance(vertex Normal, vertex Point)
 {
     float distance = 0;                                 // This variable holds the distance from the plane tot he origin
@@ -106,11 +106,11 @@ float PlaneDistance(vertex Normal, vertex Point)
 /////   This checks to see if a line intersects a plane
 /////
 /////////////////////////////////// INTERSECTED PLANE \\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\\*
-                                            
+
 bool IntersectedPlane(vertex vPoly[], vertex vLine[], vertex &vNormal, float &originDistance)
 {
     float distance1=0, distance2=0;                     // The distances from the 2 points of the line from the plane
-            
+
     vNormal = Normal(vPoly);                            // We need to get the normal of our plane to go any further
 
     // Let's find the distance our plane is from the origin.  We can find this value
@@ -585,3 +585,33 @@ bool EdgeSphereCollision(vertex &vCenter,
     return false;
 }
 
+vertex Vector(vertex vPoint1, vertex vPoint2)
+{
+    vertex vVector(0,0,0);                             // Initialize our variable to zero
+
+    // In order to get a vector from 2 points (a direction) we need to
+    // subtract the second point from the first point.
+
+    vVector.x = vPoint1.x - vPoint2.x;                  // Get the X value of our new vector
+    vVector.y = vPoint1.y - vPoint2.y;                  // Get the Y value of our new vector
+    vVector.z = vPoint1.z - vPoint2.z;                  // Get the Z value of our new vector
+
+    return vVector;                                     // Return our new vector
+}
+
+
+vertex GetCollisionOffset(vertex &vNormal, float radius, float distance)
+{
+  vertex vOffset=vertex(0,0,0);
+  if(distance>0)
+    {
+      float distanceOver=radius-distance;
+      vOffset=vNormal*distanceOver;
+    }
+  else
+    {
+     float distanceOver=radius+distance;
+     vOffset=vNormal* -distanceOver;
+    }
+  return vOffset;
+}

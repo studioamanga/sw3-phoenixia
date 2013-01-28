@@ -6,8 +6,13 @@ LIBSDIR = -L/usr/X11R6/lib -L/usr/lib
 all : main
 
 main : main.cpp
-	${COMPILE} main.cpp -o ${EXE} ${LIBS} ${LIBSDIR}
-
+	clear
+	${COMPILE} main.cpp -O2 -o ${EXE} ${LIBS} ${LIBSDIR}
+	@ echo " [OK] Compile"
+clear :
+	rm ./*~
+	rm ./sources/*~
+	@ echo " [OK] Cleaner"
 clean :
 	rm -f ${EXE} *~ \#*\#
 

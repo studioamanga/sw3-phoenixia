@@ -13,18 +13,21 @@
 #include <stdio.h>
 #include <math.h>
 #include <string.h>
-#include <iostream.h>
-#include <fstream.h>
+#include <iostream>
+#include <fstream>
+
+using namespace std;
 
 // Inclusions relatives à OpenGL
 #include <GL/glut.h>
 #include <GL/gl.h>
 
 #include "def.hpp"
-#include "fonctions.hpp"
+#include "fonct.hpp"
 #include "editor.hpp"
 
 void New(void);
+void Shaper(void);
 void Mix(void);
 void Export(void);
 void Import(void);
@@ -40,31 +43,39 @@ int main(int argc, char**argv)
 	printf("4 - Exporter un model\n");
 	printf("5 - Importer un model\n");
 	printf("6 - Muter un model\n");
+	printf("7 - Générer un model\n");
+	printf("8 - Shaper\n");
 
 	char input=getchar();
 
 	switch(input)
 	{
 	case '1' :
-		_3D(argc, argv);
-		break;
+	  _3D(argc, argv);
+	  break;
 	case '2' :
-		New();
-		break;
+	  New();
+	  break;
 	case '3' :
-		Mix();
-		break;
+	  Mix();
+	  break;
 	case '4' :
-		Export();
-		break;
+	  Export();
+	  break;
 	case '5' :
-		Import();
-		break;
+	  Import();
+	  break;
 	case '6' :
-		Mute();
-		break;
+	  Mute();
+	  break;
+	case '7' :
+	  Generate();
+	  break;
+	case '8' :
+	  Shape();
+	  break;
 	default :
-		break;
+	  break;
 	}
 
 	printf("EXIT S_MAD PROGRAM\n");

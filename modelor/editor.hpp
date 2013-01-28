@@ -15,6 +15,7 @@ double angleX=0,angleY=0;
 int idObj=0, idVertex=0, vit=2;
 float vert=0;
 bool hid=false;
+bool newLook=true;
 
 float valAbs(float x)	//**** Retourne la valeur absolue d'un float ****//
 {
@@ -106,7 +107,7 @@ void Display(void)
 	if(hid==false)
 	{
 		glTranslated(M3D->mod[idObj]->vertices[idVertex]->p.x, M3D->mod[idObj]->vertices[idVertex]->p.y, M3D->mod[idObj]->vertices[idVertex]->p.z);
-		glutSolidSphere(1,5,5);
+		glutSolidSphere(precis,5,5);
 		glutWireSphere(50,8,8);
 		glutWireSphere(200,15,15);
 	}
@@ -216,21 +217,27 @@ void Keyboard(unsigned char key, int x, int y)
 	{
 		idVertex++;
 		if(idVertex>=M3D->mod[idObj]->nb_vertices)  idVertex=M3D->mod[idObj]->nb_vertices-1;
-		posX=M3D->mod[idObj]->vertices[idVertex]->p.x+50;
-		posY=M3D->mod[idObj]->vertices[idVertex]->p.y+50;
-		posZ=M3D->mod[idObj]->vertices[idVertex]->p.z+50;
-		angleY=135;
-		angleX=-45;
+		if(newLook==true)
+		  {
+		    posX=M3D->mod[idObj]->vertices[idVertex]->p.x+50;
+		    posY=M3D->mod[idObj]->vertices[idVertex]->p.y+50;
+		    posZ=M3D->mod[idObj]->vertices[idVertex]->p.z+50;
+		    angleY=135;
+		    angleX=-45;
+		  }
 	}
 	if(key=='4')
 	{
 		idVertex--;
 		if(idVertex<=0) idVertex=0;
-		posX=M3D->mod[idObj]->vertices[idVertex]->p.x+50;
-		posY=M3D->mod[idObj]->vertices[idVertex]->p.y+50;
-		posZ=M3D->mod[idObj]->vertices[idVertex]->p.z+50;
-		angleY=135;
-		angleX=-45;
+		if(newLook==true)
+		  {
+		    posX=M3D->mod[idObj]->vertices[idVertex]->p.x+50;
+		    posY=M3D->mod[idObj]->vertices[idVertex]->p.y+50;
+		    posZ=M3D->mod[idObj]->vertices[idVertex]->p.z+50;
+		    angleY=135;
+		    angleX=-45;
+		  }
 	}
 
 	// Modification des coordonnées
@@ -275,6 +282,14 @@ void Keyboard(unsigned char key, int x, int y)
 	{
 		M3D->mod[idObj]->vertices[idVertex]->text.y-=precis;
 	}
+	if(key=='b')
+	  {
+	    printf("Vertex n%d, Objet n%d, Pos : %f, %f, %f\n",idVertex+1,idObj+1,M3D->mod[idObj]->vertices[idVertex]->p.x,M3D->mod[idObj]->vertices[idVertex]->p.y,M3D->mod[idObj]->vertices[idVertex]->p.z);
+	  }
+	if(key=='v')
+	  {
+	    newLook=!newLook;
+	  }
 	
 	// Nouvelle face
 	if(key=='n')
@@ -371,12 +386,9 @@ void Keyboard(unsigned char key, int x, int y)
 		FILE* fOut=fopen(Url,"w");
 		unsigned char id= 136;
 		fwrite(&id,sizeof(unsigned char),1,fOut);
+		int nBtag=0;
+		fwrite(&nBtag,sizeof(int),1,fOut);
 		fwrite(&(M3D->anim),sizeof(char),1,fOut);
-		fwrite(&(M3D->taille),sizeof(float),1,fOut);
-		fwrite(&(M3D->vit),sizeof(float),1,fOut);
-		fwrite(&(M3D->dir),sizeof(float),1,fOut);
-		fwrite(&(M3D->armure),sizeof(float),1,fOut);
-		fwrite(&(M3D->att),sizeof(float),1,fOut);
 		fwrite(&(M3D->nb_surface),sizeof(int),1,fOut);
 		for (int o=0 ; o<M3D->nb_surface ; o++)
 		{

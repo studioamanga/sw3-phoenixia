@@ -11,48 +11,75 @@
 ** de jeu.                                                 **
 **                                                         **
 *************************************************************/
-
+ 
 #include "sources/headers.hpp"
 
 
 
 int main(int argc, char**argv)
 {
-	printf("\n        [SW3::PHOENIXIA]\n");
-	printf("        by[studio AMANgA]@[http://studioamanga.free.fr]\n\n");
+  printf("\n        [SW3::PHOENIXIA]\n");
+  printf("        by[studio AMANgA]@[http://studioamanga.free.fr]\n\n\n");
 
 
-	// Initialisation d'OpenGL et création de la fenêtre
-	glutInit(&argc, argv);
-	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
-	glutInitWindowSize(320,240);
-	glutInitWindowPosition(10,10);
-	glutCreateWindow("SW3::PHOENIXIA");
-	// Initialisation des variables
-	Init();
+  // Initialisation d'OpenGL et création de la fenêtre
+  glutInit(&argc, argv);
+  glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
+  glutInitWindowSize(SCREEN_X,SCREEN_Y);
+  glutInitWindowPosition(10,10);
+  glutCreateWindow("SW3::PHOENIXIA");
+  // Initialisation des variables
+  Init();
 
-	// Activation de la gestion du clavier
-	glutKeyboardFunc(Keyboard);
-	glutKeyboardUpFunc(KeyboardUp);
-	// Activation de la fonction de rendu
-	glutDisplayFunc(Display);
-	// Activation des fonctions de remise à jour
-	glutReshapeFunc(Reshape);
-	glutIdleFunc(Idle);
+  // Activation de la gestion du clavier
+  glutKeyboardFunc(Keyboard);
+  glutKeyboardUpFunc(KeyboardUp);
+  // Activation de la fonction de rendu
+  glutDisplayFunc(Display);
+  // Activation des fonctions de remise à jour
+  glutReshapeFunc(Reshape);
+  glutIdleFunc(Idle);
 
-	printf("  [OK] Initialisation terminée\n");
+  printf("  [OK] Initialisation terminée\n");
 
-	// Entrée dans la boucle principale
-	glutMainLoop();
+  // Entrée dans la boucle principale
+  glutMainLoop();
 
-	// Destruction des objets dynamiques
-	delete fly;
-	delete Map;
-	delete MapColl;
-	delete Shokers;
-	// Sortie du programme
-	printf("  [OK] Destruction terminée\n");
-	printf("  sw3..phoenixia(v0.2b)\n");
-
-	return 0;
+  return 0;
 }
+
+// Fonction de sortie du programme
+void eXit(void)
+{
+  // Destruction des objets dynamiques
+  if(fly)
+    delete fly;
+  if(Map)
+    delete Map;
+  if(MapColl)
+    delete MapColl;
+  if(Shokers)
+    delete Shokers;
+  if(Crystals)
+    delete Crystals;
+
+  if(tmask)
+    delete tmask;
+  if(tcache)
+    delete tcache;
+  if(tLiquid)
+    delete tLiquid;
+
+  if(Particule)
+    delete Particule;
+
+  // Sortie du programme
+  printf("\n  [OK] Destruction terminée ( time : %d )\n\n",TisT.GetTime());
+  printf("  sw3..phoenixia(v0.3b)\n\n");
+
+  exit(0);
+
+  return;
+
+}
+
