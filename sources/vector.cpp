@@ -13,8 +13,98 @@
 
 typedef struct vertex
 {
+public:
+
+    // A default constructor
+    vertex() {}
+
+    // This is our constructor that allows us to initialize our data upon creating an instance
+    vertex(float X, float Y, float Z)
+    {
+        x = X; y = Y; z = Z;
+    }
+
+    // Here we overload the + operator so we can add vectors together
+    vertex operator+(vertex vVector)
+    {
+        // Return the added vectors result.
+        return vertex(vVector.x + x, vVector.y + y, vVector.z + z);
+    }
+
+    // Here we overload the - operator so we can subtract vectors
+    vertex operator-(vertex vVector)
+    {
+        // Return the subtracted vectors result
+        return vertex(x - vVector.x, y - vVector.y, z - vVector.z);
+    }
+
+    // Here we overload the - operator so we can subtract vectors
+    vertex operator*(float num)
+    {
+        // Return the subtracted vectors result
+        return vertex(x * num, y * num, z * num);
+    }
+
+
 	float x,y,z;
 };
+
+
+//  This returns a perpendicular vector from 2 given vectors by taking the cross product.
+vertex Cross(vertex vVector1, vertex vVector2);
+
+//  This returns the magnitude of a normal (or any other vector)
+float Magnitude(vertex vNormal);
+
+//  This returns a normalize vector (A vector exactly of length 1)
+vertex Normalize(vertex vNormal);
+
+//  This returns the normal of a polygon (The direction the polygon is facing)
+vertex Normal(vertex vPolygon[]);
+
+// This returns the distance between 2 3D points
+float Distance(vertex vPoint1, vertex vPoint2);
+
+// This returns the point on the line segment vA_vB that is closest to point vPoint
+vertex ClosestPointOnLine(vertex vA, vertex vB, vertex vPoint);
+
+// This returns the distance the plane is from the origin (0, 0, 0)
+// It takes the normal to the plane, along with ANY point that lies on the plane (any corner)
+float PlaneDistance(vertex Normal, vertex Point);
+
+// This takes a triangle (plane) and line and returns true if they intersected
+bool IntersectedPlane(vertex vPoly[], vertex vLine[], vertex &vNormal, float &originDistance);
+
+// This returns the dot product between 2 vectors
+float Dot(vertex vVector1, vertex vVector2);
+
+// This returns the angle between 2 vectors
+double AngleBetweenVectors(vertex Vector1, vertex Vector2);
+
+// This returns an intersection point of a polygon and a line (assuming intersects the plane)
+vertex IntersectionPoint(vertex vNormal, vertex vLine[], double distance);
+
+// This returns true if the intersection point is inside of the polygon
+bool InsidePolygon(vertex vIntersection, vertex Poly[], long verticeCount);
+
+// Use this function to test collision between a line and polygon
+bool IntersectedPolygon(vertex vPoly[], vertex vLine[], int verticeCount);
+
+int ClassifySphere(vertex &vCenter,
+                   vertex &vNormal, vertex &vPoint, float radius, float &distance);
+
+// This takes in the sphere center, radius, polygon vertices and vertex count.
+// This function is only called if the intersection point failed.  The sphere
+// could still possibly be intersecting the polygon, but on it's edges.
+bool EdgeSphereCollision(vertex &vCenter,
+                         vertex vPolygon[], int vertexCount, float radius);
+
+// This returns true if the sphere is intersecting with the polygon.
+// The parameters are the vertices of the polygon, vertex count, along with the center
+// and radius of the sphere.
+bool SpherePolygonCollision(vertex vPolygon[],
+                            vertex &vCenter, int vertexCount, float radius);
+
 
 float valAbs(float x)	//**** Retourne la valeur absolue d'un float ****//
 {
@@ -137,3 +227,10 @@ vecteur::vecteur(float x, float y, float z)
 vecteur::~vecteur(void)
 {
 }
+
+
+// Collision vertex format
+typedef struct Cvf
+{
+	vertex t[4];
+};

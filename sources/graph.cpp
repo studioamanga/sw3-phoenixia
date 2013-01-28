@@ -11,6 +11,110 @@
 **                                                         **
 *************************************************************/
 
+
+// Constructeur
+cl_model::cl_model(char * file)
+{
+	this->nb_objet=0;
+
+	FILE * fOut=fopen(file,"r");
+
+	unsigned char id;
+	fread(&id,sizeof(unsigned char),1,fOut);
+	if(id!=136) printf("Type de model erroné !\n");
+
+	fread(&(this->anim),sizeof(char),1,fOut);
+
+	fseek(fOut, 5*sizeof(float), SEEK_CUR);
+	fread(&(this->nb_objet),sizeof(int),1,fOut);
+	this->texture=new GLuint*[this->nb_objet];
+	this->skin=new int*[this->nb_objet];
+
+	int nbVertices=0;
+
+	for(int i=0 ; i<this->nb_objet ; i++)
+	{
+		this->skin[i]=new int;
+		*(this->skin[i])=glGenLists(1);
+
+		char text[50];
+		fread(&text, sizeof(char), 50, fOut);
+		this->texture[i]=new GLuint;
+		*(this->texture[i])=LoadBMP(text);
+
+		char type;
+		fread(&type, sizeof(char), 1, fOut);
+		glNewList(*(this->skin[i]),GL_COMPILE);
+		switch (type)
+		{
+		case 'L' :
+			glBegin(GL_TRIANGLES);
+			break;
+		case 'T' :
+			glBegin(GL_TRIANGLE_STRIP);
+			break;
+		case 'F' :
+			glBegin(GL_TRIANGLE_FAN);
+			break;
+		default :
+			glBegin(GL_QUADS);
+		}
+
+		int nb_vert;
+		fread(&nb_vert, sizeof(int), 1, fOut);
+
+		for(int y=0 ; y<nb_vert ; y++)
+		{
+			float x,y,z,tx,ty;
+			fread(&x, sizeof(float), 1, fOut);
+			fread(&y, sizeof(float), 1, fOut);
+			fread(&z, sizeof(float), 1, fOut);
+			fread(&tx, sizeof(float), 1, fOut);
+			fread(&ty, sizeof(float), 1, fOut);
+			nbVertices++;
+
+			glTexCoord2f(tx,ty); glVertex3f(x,y,z);
+		}
+		glEnd();
+		glEndList();
+
+	}
+	printf("  [OK] Model chargé (%d objets, %d vertices)\n", this->nb_objet,nbVertices);
+	fclose (fOut);
+
+}
+
+// Destructeur
+cl_model::~cl_model(void)
+{
+	for(int i=0; i<this->nb_objet ; i++)
+	{
+		delete this->skin[i];
+		delete this->texture[i];
+	}
+
+	delete this->texture;
+	delete this->skin;
+}
+
+// Affichage
+bool cl_model::aff(void)
+{
+	switch(this->anim)
+	{
+	case 'S' :
+		break;
+	default :
+		for(int i=0 ; i<this->nb_objet ; i++)
+		{
+			glBindTexture(GL_TEXTURE_2D, *(this->texture[i]));
+			glCallList(*(this->skin[i]));
+		}
+		break;
+	}
+	return true;
+}
+
 // Fonction d'affichage de la map
 void Aff_map(char id) // Identifiant permettant de spécifier la map
 {
@@ -19,31 +123,21 @@ void Aff_map(char id) // Identifiant permettant de spécifier la map
 	if(id=='c')
 	// Correspond à la map 'CyberIndus'
 	{
-		// Cube d'environnement ( texture + model )
-		glBindTexture(GL_TEXTURE_2D, text_ciel);
-		glCallList(id_ciel);
-
-		// Sol ( texture + model )
-		glBindTexture(GL_TEXTURE_2D, text_sol);
-		glCallList(id_sol);
+		Map->aff();
 
 		// Plateformes et piliers du spatioport ( texture + model )
-		glBindTexture(GL_TEXTURE_2D, text_spatioport);
-		glCallList(id_spatioport);
-
-		// Tours et bâtiments ( texture + model )
-		glBindTexture(GL_TEXTURE_2D, text_hlm);
-		glCallList(id_hlm);
-
-		// Tours et bâtiments ( texture + model )
-		glBindTexture(GL_TEXTURE_2D, text_tunnel);
-		glCallList(id_tunnel);
+		//glBindTexture(GL_TEXTURE_2D, text_spatioport);
+		//glCallList(id_spatioport);
 	}
 	// Reprise de la matrice d'origine
 	glPopMatrix();
 
+	// Affichage des drones
+	Shokers->Update();
+
 	return;
 }
+
 
 // Gestion d'initialisation globale
 void Init(void)
@@ -55,15 +149,16 @@ void Init(void)
 
 	// Chargement des textures à partir des fichiers
 	text_shoker = LoadBMP("data/textures/ent/shoker.bmp");
-	text_ciel = LoadBMP("data/textures/env/ciel.bmp");
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_T,GL_CLAMP_TO_EDGE);
-	glTexParameteri(GL_TEXTURE_2D,GL_TEXTURE_WRAP_S,GL_CLAMP_TO_EDGE);		text_sol = LoadBMP("data/textures/env/pierrebl.bmp");
-	text_spatioport = LoadBMP("data/textures/wall/spatioport.bmp");
-	text_hlm = LoadBMP("data/textures/wall/hlm.bmp");
-	text_tunnel = LoadBMP("data/textures/wall/tunnel.bmp");
+	Map=new cl_model("modelor/phoenixsanct.mad");
 
 	// Allocation mémoire de la classe 'wing' du vaisseau principal
 	fly=new cl_wing;
+
+	// Allocation mémoire de la classe 'bsp' des collisions de la map
+	MapColl=new cl_bsp("modelor/phoenixsanct.mad");
+
+	// Initialisation des drones Shoker
+	Shokers= new cl_shoker(SHOKER01);
 
 	// Initialisation des models
 	Init_Models();
@@ -75,7 +170,7 @@ void Init(void)
 	glFogf(GL_FOG_START, 100.0f);
 	glFogf(GL_FOG_END, 1000.0);
 	// Activation du brouillard
-	glEnable(GL_FOG);
+	//glEnable(GL_FOG);
 
 	return;
 }
@@ -84,7 +179,7 @@ void Init(void)
 void Display(void)
 {
 	// Nettoyage du tampon ( par la couleur noire )
-	glClearColor(0,0,0,0);
+	glClearColor(0.8,0.8,1,1);
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 
 	// Réinitialisation de la matrice de vue

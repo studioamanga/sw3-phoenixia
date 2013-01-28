@@ -18,12 +18,16 @@
 
 int main(int argc, char**argv)
 {
+	printf("\n        [SW3::PHOENIXIA]\n");
+	printf("        by[studio AMANgA]@[http://studioamanga.free.fr]\n\n");
+
+
 	// Initialisation d'OpenGL et création de la fenêtre
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_RGBA | GLUT_DOUBLE | GLUT_DEPTH);
 	glutInitWindowSize(320,240);
 	glutInitWindowPosition(10,10);
-	glutCreateWindow("Phoenixia");
+	glutCreateWindow("SW3::PHOENIXIA");
 	// Initialisation des variables
 	Init();
 
@@ -36,11 +40,19 @@ int main(int argc, char**argv)
 	glutReshapeFunc(Reshape);
 	glutIdleFunc(Idle);
 
+	printf("  [OK] Initialisation terminée\n");
+
 	// Entrée dans la boucle principale
 	glutMainLoop();
 
 	// Destruction des objets dynamiques
 	delete fly;
+	delete Map;
+	delete MapColl;
+	delete Shokers;
 	// Sortie du programme
+	printf("  [OK] Destruction terminée\n");
+	printf("  sw3..phoenixia(v0.2b)\n");
+
 	return 0;
 }

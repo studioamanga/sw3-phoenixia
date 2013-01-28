@@ -39,6 +39,27 @@ struct cl_input
 	bool up, down, left, right;
 };
 
+// Classe des models
+class cl_model
+{
+	private:
+		// Nombre d'objets
+		int nb_objet;
+		// Type d'animation
+		char anim;
+		// Id vers la texture
+		GLuint **texture;
+		// Id vers la skin
+		int **skin;
+	public :
+		cl_model(char * file);
+		~cl_model(void);
+		bool aff(void);
+};
+
+cl_model * Map;
+
+
 // Classe d'un vaisseau, dérivée d'une entité
 class cl_wing : public cl_ent
 {
@@ -49,10 +70,8 @@ class cl_wing : public cl_ent
 		double inclin, inclinMod;
 		// Facteur de vitesse
 		float v;
-		// Id vers la texture
-		GLuint texture;
-		// Id vers le model
-		int model;
+		// Model (skin)
+		cl_model *Model;
 	public :
 		// Gestion des touches agissants sur le vaisseau
 		cl_input *input;
@@ -81,7 +100,7 @@ cl_ent::cl_ent(void)
 	// Donner une position à l'origine
 	pos->x=0;
 	pos->y=0;
-	pos->z=0;
+	pos->z=500;
 }
 
 // Destructeur de la classe d'entité
@@ -106,6 +125,7 @@ float cl_wing::getV(void)
 void cl_wing::setV(float v1)
 {
 	this->v=v1;
+	if(this->v>6) this->v=6;
 	return;
 }
 
@@ -127,8 +147,6 @@ void cl_wing::afficher(void)
 {
 	// Sauvegarde de la matrice courante
 	glPushMatrix();
-	// On sélectionne la texture correspondant à la skin
-	glBindTexture(GL_TEXTURE_2D, this->texture);
 	// Translation vers les positions en x, y et z du vaisseau
 	glTranslated(this->getPos().x,this->getPos().y,this->getPos().z);
 	// Rotation autour de y pour la direction
@@ -136,16 +154,18 @@ void cl_wing::afficher(void)
 	// Rotation autour de z pour l'inclinaison
 	glRotated(this->inclin+this->inclinMod,0,0,1);
 	// Affichage du model du vaisseau
-	glCallList(this->model);
+	Model->aff();
 	// Reprise de la matrice d'origine
 	glPopMatrix();
 
 	return;
 }
 
+
 // Fonction de remise à jour des positions du vaisseau en fonction des touches pressées
 void cl_wing::avancer(void)
 {
+
 	if(this->input->up==true)
 	{	// Touche 'haut'
 		this->inclin-=5*Tfact;	// On ajuste l'angle de braquage
@@ -186,12 +206,22 @@ void cl_wing::avancer(void)
 	// Sinon on réajuste l'angle d'inclinaison
 	else { if(this->dirMod<0) this->dirMod++; if(this->dirMod<0) this->dirMod++; }
 
+	vertex may;
+
 	// On remet à jour la position en y par rapport à l'angle d'inclinaison
-	this->pos->y+=this->v*Sin(inclin)*Tfact;
+	may.y=this->v*Sin(inclin)*Tfact+this->pos->y;
 
 	// On remet à jour les positions en x et z par rapport à l'angle de direction
-	this->pos->x+=this->v*Cos(dir)*Cos(valAbs(inclin))*Tfact;
-	this->pos->z-=this->v*Sin(dir)*Cos(valAbs(inclin))*Tfact;
+	may.x=this->pos->x+this->v*Cos(dir)*Cos(valAbs(inclin))*Tfact;
+	may.z=this->pos->z-this->v*Sin(dir)*Cos(valAbs(inclin))*Tfact;
+
+	if(MapColl->explorer(may,3)){}
+	else
+	{
+		this->pos->x=may.x;
+		this->pos->y=may.y;
+		this->pos->z=may.z;
+	}
 
 	return;
 }
@@ -211,327 +241,7 @@ cl_wing::cl_wing(void)
 	input->left=false;
 	input->right=false;
 
-	// Génération de l'identificateur pour le model du vaisseau
-	this->model=glGenLists(1);
-	// Génération et initialisation de la texture de skin du vaisseau
-	this->texture = LoadBMP("data/textures/wing/serv03.bmp");
-
-	// Création du model du vaisseau
-	glNewList(this->model,GL_COMPILE);
-	glBegin(GL_QUADS);
-	// ************* Corps *******************//
-	// Fond
-	glTexCoord2f(0.625,0.785); glVertex3f(-1.2,-0.65,0.375);
-	glTexCoord2f(0.33,0.785); glVertex3f(-1.2,-0.65,-0.375);
-	glTexCoord2f(0.33,0.45); glVertex3f(3.,-0.65,-0.375);
-	glTexCoord2f(0.625,0.45); glVertex3f(3.,-0.65,0.375);
-	// Petit côté droit
-	glTexCoord2f(0.625,0.785); glVertex3f(-1.2,-0.65,0.375);
-	glTexCoord2f(0.6,0.785); glVertex3f(-1.25,-0.5,0.4);
-	glTexCoord2f(0.6,0.45); glVertex3f(3.5,-0.5,0.4);
-	glTexCoord2f(0.625,0.45); glVertex3f(3.,-0.65,0.375);
-	// Petit côté gauche
-	glTexCoord2f(0.625,0.785); glVertex3f(-1.2,-0.65,-0.375);
-	glTexCoord2f(0.6,0.785); glVertex3f(-1.25,-0.5,-0.4);
-	glTexCoord2f(0.6,0.45); glVertex3f(3.5,-0.5,-0.4);
-	glTexCoord2f(0.625,0.45); glVertex3f(3.,-0.65,-0.375);
-	// Petit côté avant
-	glTexCoord2f(0.52,0.132); glVertex3f(3.,-0.65,0.375);
-	glTexCoord2f(0.48,0.132); glVertex3f(3.,-0.65,-0.375);
-	glTexCoord2f(0.48,0.1); glVertex3f(3.5,-0.5,-0.4);
-	glTexCoord2f(0.52,0.1); glVertex3f(3.5,-0.5,0.4);
-	// Petit côté arrière
-	glTexCoord2f(0.52,0.132); glVertex3f(-1.2,-0.65,0.375);
-	glTexCoord2f(0.48,0.132); glVertex3f(-1.2,-0.65,-0.375);
-	glTexCoord2f(0.48,0.1); glVertex3f(-1.25,-0.5,-0.4);
-	glTexCoord2f(0.52,0.1); glVertex3f(-1.25,-0.5,0.4);
-	// Petit côté avant supérieur
-	glTexCoord2f(0.52,0.05); glVertex3f(3.5,-0.5,0.4);
-	glTexCoord2f(0.48,0.05); glVertex3f(3.5,-0.5,-0.4);
-	glTexCoord2f(0.48,0.09); glVertex3f(2.75,-0.25,-0.25);
-	glTexCoord2f(0.52,0.09); glVertex3f(2.75,-0.25,0.25);
-	// Petit côté droit supérieur
-	glTexCoord2f(0.625,0.785); glVertex3f(3.5,-0.5,0.4);
-	glTexCoord2f(0.6,0.785); glVertex3f(0.,-0.5,0.4);
-	glTexCoord2f(0.6,0.45); glVertex3f(0.,-0.25,0.25);
-	glTexCoord2f(0.625,0.45); glVertex3f(2.75,-0.25,0.25);
-	// Petit côté gauche supérieur
-	glTexCoord2f(0.625,0.785); glVertex3f(3.5,-0.5,-0.4);
-	glTexCoord2f(0.6,0.785); glVertex3f(0.,-0.5,-0.4);
-	glTexCoord2f(0.6,0.45); glVertex3f(0.,-0.25,-0.25);
-	glTexCoord2f(0.625,0.45); glVertex3f(2.75,-0.25,-0.25);
-	// Vitre avant
-	glTexCoord2f(0.52,0.135); glVertex3f(2.75,-0.25,0.25);
-	glTexCoord2f(0.48,0.135); glVertex3f(2.75,-0.25,-0.25);
-	glTexCoord2f(0.48,0.15); glVertex3f(2.5,0.,-0.2);
-	glTexCoord2f(0.52,0.15); glVertex3f(2.5,0.,0.2);
-	// Vitre avant médiane
-	glTexCoord2f(0.48,0.15); glVertex3f(2.5,0.,0.2);
-	glTexCoord2f(0.52,0.15); glVertex3f(2.5,0.,-0.2);
-	glTexCoord2f(0.52,0.30); glVertex3f(1.65,0.45,-0.3);
-	glTexCoord2f(0.48,0.30); glVertex3f(1.65,0.45,0.3);
-	// Vitre avant supérieure
-	glTexCoord2f(0.48,0.30); glVertex3f(1.65,0.45,0.3);
-	glTexCoord2f(0.52,0.30); glVertex3f(1.65,0.45,-0.3);
-	glTexCoord2f(0.52,0.35); glVertex3f(1.2,0.45,-0.4);
-	glTexCoord2f(0.48,0.35); glVertex3f(1.2,0.45,0.4);
-	// Vitre droite avant
-	glTexCoord2f(0.52,0.135); glVertex3f(2.75,-0.25,0.25);
-	glTexCoord2f(0.48,0.135); glVertex3f(1.65,-0.25,0.3);
-	glTexCoord2f(0.48,0.35); glVertex3f(1.65,0.45,0.3);
-	glTexCoord2f(0.52,0.35); glVertex3f(2.5,0.,0.2);
-	// Vitre gauche avant
-	glTexCoord2f(0.52,0.135); glVertex3f(2.75,-0.25,-0.25);
-	glTexCoord2f(0.48,0.135); glVertex3f(1.65,-0.25,-0.3);
-	glTexCoord2f(0.48,0.35); glVertex3f(1.65,0.45,-0.3);
-	glTexCoord2f(0.52,0.35); glVertex3f(2.5,0.,-0.2);
-	// Vitre droite arrière
-	glTexCoord2f(0.52,0.135); glVertex3f(1.65,-0.25,0.3);
-	glTexCoord2f(0.48,0.135); glVertex3f(1.,-0.25,0.4);
-	glTexCoord2f(0.48,0.35); glVertex3f(1.2,0.45,0.4);
-	glTexCoord2f(0.52,0.35); glVertex3f(1.65,0.45,0.3);
-	// Vitre gauche arrière
-	glTexCoord2f(0.52,0.135); glVertex3f(1.65,-0.25,-0.3);
-	glTexCoord2f(0.48,0.135); glVertex3f(1.,-0.25,-0.4);
-	glTexCoord2f(0.48,0.35); glVertex3f(1.2,0.45,-0.4);
-	glTexCoord2f(0.52,0.35); glVertex3f(1.65,0.45,-0.3);
-	// Côté droit inférieur
-	glTexCoord2f(0.625,0.785); glVertex3f(1.5,-0.5,0.4);
-	glTexCoord2f(0.6,0.785); glVertex3f(-1.,-0.5,0.4);
-	glTexCoord2f(0.6,0.45); glVertex3f(-1.,-0.25,0.6);
-	glTexCoord2f(0.625,0.45); glVertex3f(1.5,-0.25,0.6);
-	// Côté gauche inférieur
-	glTexCoord2f(0.625,0.785); glVertex3f(1.5,-0.5,-0.4);
-	glTexCoord2f(0.6,0.785); glVertex3f(-1.,-0.5,-0.4);
-	glTexCoord2f(0.6,0.45); glVertex3f(-1.,-0.25,-0.6);
-	glTexCoord2f(0.625,0.45); glVertex3f(1.5,-0.25,-0.6);
-	// Côté droit supérieur
-	glTexCoord2f(0.625,0.785); glVertex3f(1.5,0.15,0.6);
-	glTexCoord2f(0.6,0.785); glVertex3f(-1.,0.15,0.6);
-	glTexCoord2f(0.6,0.45); glVertex3f(-1.,0.4,0.4);
-	glTexCoord2f(0.625,0.45); glVertex3f(1.5,0.4,0.4);
-	// Côté gauche supérieur
-	glTexCoord2f(0.625,0.785); glVertex3f(1.5,0.15,-0.6);
-	glTexCoord2f(0.6,0.785); glVertex3f(-1.,0.15,-0.6);
-	glTexCoord2f(0.6,0.45); glVertex3f(-1.,0.4,-0.4);
-	glTexCoord2f(0.625,0.45); glVertex3f(1.5,0.4,-0.4);
-	// Côté droit
-	glTexCoord2f(0.625,0.785); glVertex3f(1.5,-0.25,0.6);
-	glTexCoord2f(0.6,0.785); glVertex3f(-1.,-0.25,0.6);
-	glTexCoord2f(0.6,0.45); glVertex3f(-1.,0.15,0.6);
-	glTexCoord2f(0.625,0.45); glVertex3f(1.5,0.15,0.6);
-	// Côté gauche
-	glTexCoord2f(0.625,0.785); glVertex3f(1.5,-0.25,-0.6);
-	glTexCoord2f(0.6,0.785); glVertex3f(-1.,-0.25,-0.6);
-	glTexCoord2f(0.6,0.45); glVertex3f(-1.,0.15,-0.6);
-	glTexCoord2f(0.625,0.45); glVertex3f(1.5,0.15,-0.6);
-	// Côté droit intérieur
-	glTexCoord2f(0.625,0.785); glVertex3f(1.5,-0.5,0.4);
-	glTexCoord2f(0.6,0.785); glVertex3f(-1.25,-0.5,0.4);
-	glTexCoord2f(0.6,0.45); glVertex3f(-1.25,0.4,0.4);
-	glTexCoord2f(0.625,0.45); glVertex3f(1.5,0.4,0.4);
-	// Côté gauche intérieur
-	glTexCoord2f(0.625,0.785); glVertex3f(1.5,-0.5,-0.4);
-	glTexCoord2f(0.6,0.785); glVertex3f(-1.25,-0.5,-0.4);
-	glTexCoord2f(0.6,0.45); glVertex3f(-1.25,0.4,-0.4);
-	glTexCoord2f(0.625,0.45); glVertex3f(1.5,0.4,-0.4);
-	// Toit
-	glTexCoord2f(0.625,0.785); glVertex3f(-1.25,0.4,0.4);
-	glTexCoord2f(0.33,0.785); glVertex3f(-1.25,0.4,-0.4);
-	glTexCoord2f(0.33,0.45); glVertex3f(1.2,0.4,-0.4);
-	glTexCoord2f(0.625,0.45); glVertex3f(1.2,0.4,0.4);
-	// Back
-	glTexCoord2f(0.625,0.785); glVertex3f(-1.25,-0.5,0.4);
-	glTexCoord2f(0.33,0.785); glVertex3f(-1.25,-0.5,-0.4);
-	glTexCoord2f(0.33,0.45); glVertex3f(-1.25,0.4,-0.4);
-	glTexCoord2f(0.625,0.45); glVertex3f(-1.25,0.4,0.4);
-	// Réacteur
-	glTexCoord2f(0.38,0.9); glVertex3f(-1.45,-0.375,0.45);
-	glTexCoord2f(0.62,0.9); glVertex3f(-1.45,-0.375,-0.45);
-	glTexCoord2f(0.62,0.8); glVertex3f(-1.45,0.25,-0.45);
-	glTexCoord2f(0.38,0.8); glVertex3f(-1.45,0.25,0.45);
-	// Face supérieure du réacteur
-	glTexCoord2f(0.38,0.9); glVertex3f(-1.45,0.25,0.45);
-	glTexCoord2f(0.62,0.9); glVertex3f(-1.45,0.25,-0.45);
-	glTexCoord2f(0.62,1.); glVertex3f(0.,0.25,-0.45);
-	glTexCoord2f(0.38,1.); glVertex3f(0.,0.25,0.45);
-	// Face inférieure du réacteur
-	glTexCoord2f(0.38,0.9); glVertex3f(-1.45,-0.375,0.45);
-	glTexCoord2f(0.62,0.9); glVertex3f(-1.45,-0.375,-0.45);
-	glTexCoord2f(0.62,1.); glVertex3f(0.,-0.375,-0.45);
-	glTexCoord2f(0.38,1.); glVertex3f(0.,-0.375,0.45);
-	// Face droite du réacteur
-	glTexCoord2f(0.38,0.9); glVertex3f(-1.45,-0.375,0.45);
-	glTexCoord2f(0.62,0.9); glVertex3f(-1.45,0.25,0.45);
-	glTexCoord2f(0.62,1.); glVertex3f(0.,0.25,0.45);
-	glTexCoord2f(0.38,1.); glVertex3f(0.,-0.375,0.45);
-	// Face gauche du réacteur
-	glTexCoord2f(0.38,0.9); glVertex3f(-1.45,-0.375,-0.45);
-	glTexCoord2f(0.62,0.9); glVertex3f(-1.45,0.25,-0.45);
-	glTexCoord2f(0.62,1.); glVertex3f(0.,0.25,-0.45);
-	glTexCoord2f(0.38,1.); glVertex3f(0.,-0.375,-0.45);
-
-	// ************* Aile supérieure ***************//
-	// Face droite avant
-	glTexCoord2f(0.33,1.); glVertex3f(-1.25,0.4,0.05);
-	glTexCoord2f(0.,0.6); glVertex3f(-3.,1.6,0.05);
-	glTexCoord2f(0.,0.385); glVertex3f(0.25,1.6,0.05);
-	glTexCoord2f(0.33,0.785); glVertex3f(1.,0.4,0.05);
-	// Face gauche avant
-	glTexCoord2f(0.67,1.); glVertex3f(-1.25,0.4,-0.05);
-	glTexCoord2f(1.,0.6); glVertex3f(-3.,1.6,-0.05);
-	glTexCoord2f(1.,0.385); glVertex3f(0.25,1.6,-0.05);
-	glTexCoord2f(0.67,0.785); glVertex3f(1.,0.4,-0.05);
-	// Face supérieure avant
-	glTexCoord2f(0.49,0.4); glVertex3f(1.,0.4,0.05);
-	glTexCoord2f(0.51,0.4); glVertex3f(0.25,1.6,0.05);
-	glTexCoord2f(0.51,0.7); glVertex3f(0.25,1.6,-0.05);
-	glTexCoord2f(0.49,0.7); glVertex3f(1.,0.4,-0.05);
-	// Face supérieure
-	glTexCoord2f(0.49,0.4); glVertex3f(0.25,1.6,0.05);
-	glTexCoord2f(0.51,0.4); glVertex3f(-3.,1.6,0.05);
-	glTexCoord2f(0.51,0.7); glVertex3f(-3.,1.6,-0.05);
-	glTexCoord2f(0.49,0.7); glVertex3f(0.25,1.6,-0.05);
-	// Face droite arrière
-	glTexCoord2f(0.2,0.9); glVertex3f(-1.25,0.4,0.05);
-	glTexCoord2f(0.15,1.); glVertex3f(-3.,0.6,0.05);
-	glTexCoord2f(0.05,1.); glVertex3f(-3.4,1.3,0.05);
-	glTexCoord2f(0.,0.6); glVertex3f(-3.,1.6,0.05);
-	// Face gauche arrière
-	glTexCoord2f(0.8,0.9); glVertex3f(-1.25,0.4,-0.05);
-	glTexCoord2f(0.85,1.); glVertex3f(-3.,0.6,-0.05);
-	glTexCoord2f(0.95,1.); glVertex3f(-3.4,1.3,-0.05);
-	glTexCoord2f(1.,0.6); glVertex3f(-3.,1.6,-0.05);
-	// Face supérieure arrière
-	glTexCoord2f(0.49,0.4); glVertex3f(-3.,1.6,0.05);
-	glTexCoord2f(0.51,0.4); glVertex3f(-3.4,1.3,0.05);
-	glTexCoord2f(0.51,0.7); glVertex3f(-3.4,1.3,-0.05);
-	glTexCoord2f(0.49,0.7); glVertex3f(-3.,1.6,-0.05);
-	// Face arrière
-	glTexCoord2f(0.49,0.4); glVertex3f(-3.4,1.3,0.05);
-	glTexCoord2f(0.51,0.4); glVertex3f(-3.,0.6,0.05);
-	glTexCoord2f(0.51,0.7); glVertex3f(-3.,0.6,-0.05);
-	glTexCoord2f(0.49,0.7); glVertex3f(-3.4,1.3,-0.05);
-	// Face arrière antérieure
-	glTexCoord2f(0.49,0.4); glVertex3f(-3.,0.6,0.05);
-	glTexCoord2f(0.51,0.4); glVertex3f(-1.25,0.4,0.05);
-	glTexCoord2f(0.51,0.7); glVertex3f(-1.25,0.4,-0.05);
-	glTexCoord2f(0.49,0.7); glVertex3f(-3.,0.6,-0.05);
-
-	// *********** Ailes latérales ***************//
-	// Aile droite : face intérieure supérieure
-	glTexCoord2f(0.65,0.785); glVertex3f(-1.25,0.4,0.4);
-	glTexCoord2f(0.85,0.4); glVertex3f(-0.75,-0.6,2.);
-	glTexCoord2f(0.85,0.3); glVertex3f(1.4,-0.6,2.);
-	glTexCoord2f(0.65,0.45); glVertex3f(0.65,0.4,0.4);
-	// Aile droite : face extérieure supérieure
-	glTexCoord2f(0.85,0.4); glVertex3f(-0.75,-0.6,2.);
-	glTexCoord2f(1.,0.385); glVertex3f(0.,-1.5,2.5);
-	glTexCoord2f(1.,0.); glVertex3f(2.,-1.5,2.5);
-	glTexCoord2f(0.85,0.3); glVertex3f(1.4,-0.6,2.);
-	// Aile droite : face intérieure inférieure
-	glTexCoord2f(0.65,0.785); glVertex3f(-1.25,0.3,0.4);
-	glTexCoord2f(0.85,0.4); glVertex3f(-0.75,-0.7,2.);
-	glTexCoord2f(0.85,0.3); glVertex3f(1.4,-0.6,2.);
-	glTexCoord2f(0.65,0.45); glVertex3f(0.65,0.4,0.4);
-	// Aile droite : face extérieure inférieure
-	glTexCoord2f(0.85,0.4); glVertex3f(-0.75,-0.7,2.);
-	glTexCoord2f(1.,0.385); glVertex3f(0.,-1.6,2.45);
-	glTexCoord2f(1.,0.); glVertex3f(2.,-1.5,2.5);
-	glTexCoord2f(0.85,0.3); glVertex3f(1.4,-0.6,2.);
-	// Aile droite : face intérieure arrière
-	glTexCoord2f(0.49,0.4); glVertex3f(-1.25,0.3,0.4);
-	glTexCoord2f(0.51,0.4); glVertex3f(-0.75,-0.7,2.);
-	glTexCoord2f(0.51,0.7); glVertex3f(-0.75,-0.6,2.);
-	glTexCoord2f(0.49,0.7); glVertex3f(-1.25,0.4,0.4);
-	// Aile droite : face extérieure arrière
-	glTexCoord2f(0.49,0.4); glVertex3f(-0.75,-0.7,2.);
-	glTexCoord2f(0.51,0.4); glVertex3f(0.05,-1.55,2.5);
-	glTexCoord2f(0.51,0.7); glVertex3f(0.05,-1.55,2.55);
-	glTexCoord2f(0.49,0.7); glVertex3f(-0.75,-0.6,2.);
-	// Aile droite : face intérieure du pic
-	glTexCoord2f(1.,0.05); glVertex3f(0.,-1.5,2.5);
-	glTexCoord2f(1.,0.); glVertex3f(0.,-1.6,2.45);
-	glTexCoord2f(0.7,0.); glVertex3f(3.5,-1.6,2.45);
-	glTexCoord2f(0.7,0.05); glVertex3f(3.4,-1.5,2.5);
-	// Aile droite : face extétieure du pic
-	glTexCoord2f(1.,0.05); glVertex3f(0.05,-1.55,2.55);
-	glTexCoord2f(1.,0.); glVertex3f(0.05,-1.65,2.5);
-	glTexCoord2f(0.7,0.); glVertex3f(3.55,-1.65,2.5);
-	glTexCoord2f(0.7,0.05); glVertex3f(3.45,-1.55,2.55);
-	// Aile droite : face supérieure du pic
-	glTexCoord2f(1.,0.05); glVertex3f(0.,-1.5,2.5);
-	glTexCoord2f(1.,0.); glVertex3f(0.05,-1.65,2.5);
-	glTexCoord2f(0.7,0.); glVertex3f(3.45,-1.55,2.5);
-	glTexCoord2f(0.7,0.05); glVertex3f(3.4,-1.5,2.5);
-	// Aile droite : face inférieure du pic
-	glTexCoord2f(1.,0.05); glVertex3f(0.,-1.6,2.45);
-	glTexCoord2f(1.,0.); glVertex3f(0.05,-1.65,2.5);
-	glTexCoord2f(0.7,0.); glVertex3f(3.55,-1.65,2.5);
-	glTexCoord2f(0.7,0.05); glVertex3f(3.4,-1.5,2.5);
-	// Aile droite : face avant du pic
-	glTexCoord2f(1.,0.05); glVertex3f(3.45,-1.55,2.55);
-	glTexCoord2f(1.,0.); glVertex3f(3.55,-1.65,2.5);
-	glTexCoord2f(0.7,0.); glVertex3f(3.5,-1.6,2.45);
-	glTexCoord2f(0.7,0.05); glVertex3f(3.4,-1.5,2.5);
-	// Aile gauche : face intérieure supérieure
-	glTexCoord2f(0.33,0.785); glVertex3f(-1.25,0.4,-0.4);
-	glTexCoord2f(0.15,0.4); glVertex3f(-0.75,-0.6,-2.);
-	glTexCoord2f(0.15,0.3); glVertex3f(1.4,-0.6,-2.);
-	glTexCoord2f(0.33,0.45); glVertex3f(0.65,0.4,-0.4);
-	// Aile gauche : face extérieure supérieure
-	glTexCoord2f(0.15,0.4); glVertex3f(-0.75,-0.6,-2.);
-	glTexCoord2f(0.,0.385); glVertex3f(0.,-1.5,-2.5);
-	glTexCoord2f(0.,0.); glVertex3f(2.,-1.5,-2.5);
-	glTexCoord2f(0.15,0.3); glVertex3f(1.4,-0.6,-2.);
-	// Aile gauche : face intérieure inférieure
-	glTexCoord2f(0.33,0.785); glVertex3f(-1.25,0.3,-0.4);
-	glTexCoord2f(0.15,0.4); glVertex3f(-0.75,-0.7,-2.);
-	glTexCoord2f(0.15,0.3); glVertex3f(1.4,-0.6,-2.);
-	glTexCoord2f(0.33,0.45); glVertex3f(0.65,0.4,-0.4);
-	// Aile gauche : face extérieure inférieure
-	glTexCoord2f(0.15,0.4); glVertex3f(-0.75,-0.7,-2.);
-	glTexCoord2f(0.,0.385); glVertex3f(0.,-1.6,-2.45);
-	glTexCoord2f(0.,0.); glVertex3f(2.,-1.5,-2.5);
-	glTexCoord2f(0.15,0.3); glVertex3f(1.4,-0.6,-2.);
-	// Aile gauche : face intérieure arrière
-	glTexCoord2f(0.49,0.4); glVertex3f(-1.25,0.3,-0.4);
-	glTexCoord2f(0.51,0.4); glVertex3f(-0.75,-0.7,-2.);
-	glTexCoord2f(0.51,0.7); glVertex3f(-0.75,-0.6,-2.);
-	glTexCoord2f(0.49,0.7); glVertex3f(-1.25,0.4,-0.4);
-	// Aile gauche : face extérieure arrière
-	glTexCoord2f(0.49,0.4); glVertex3f(-0.75,-0.7,-2.);
-	glTexCoord2f(0.51,0.4); glVertex3f(0.05,-1.65,-2.5);
-	glTexCoord2f(0.51,0.7); glVertex3f(0.05,-1.55,-2.55);
-	glTexCoord2f(0.49,0.7); glVertex3f(-0.75,-0.6,-2.);
-	// Aile gauche : face intérieure du pic
-	glTexCoord2f(0.,0.05); glVertex3f(0.,-1.5,-2.5);
-	glTexCoord2f(0.,0.); glVertex3f(0.,-1.6,-2.45);
-	glTexCoord2f(0.3,0.); glVertex3f(3.5,-1.6,-2.45);
-	glTexCoord2f(0.3,0.05); glVertex3f(3.4,-1.5,-2.5);
-	// Aile gauche : face extétieure du pic
-	glTexCoord2f(0.,0.05); glVertex3f(0.05,-1.55,-2.55);
-	glTexCoord2f(0.,0.); glVertex3f(0.05,-1.65,-2.5);
-	glTexCoord2f(0.3,0.); glVertex3f(3.55,-1.65,-2.5);
-	glTexCoord2f(0.3,0.05); glVertex3f(3.45,-1.55,-2.55);
-	// Aile gauche : face supérieure du pic
-	glTexCoord2f(0.,0.05); glVertex3f(0.,-1.5,-2.5);
-	glTexCoord2f(0.,0.); glVertex3f(0.05,-1.65,-2.5);
-	glTexCoord2f(0.3,0.); glVertex3f(3.45,-1.55,-2.5);
-	glTexCoord2f(0.3,0.05); glVertex3f(3.4,-1.5,-2.5);
-	// Aile gauche : face inférieure du pic
-	glTexCoord2f(0.,0.05); glVertex3f(0.,-1.6,-2.45);
-	glTexCoord2f(0.,0.); glVertex3f(0.05,-1.65,-2.5);
-	glTexCoord2f(0.3,0.); glVertex3f(3.55,-1.65,-2.5);
-	glTexCoord2f(0.3,0.05); glVertex3f(3.4,-1.5,-2.5);
-	// Aile gauche : face avant du pic
-	glTexCoord2f(0.,0.05); glVertex3f(3.45,-1.55,-2.55);
-	glTexCoord2f(0.,0.); glVertex3f(3.55,-1.65,-2.5);
-	glTexCoord2f(0.3,0.); glVertex3f(3.5,-1.6,-2.45);
-	glTexCoord2f(0.3,0.05); glVertex3f(3.4,-1.5,-2.5);
-
-	glEnd();
-	glEndList();
+	Model=new cl_model("modelor/serv03.mad");
 
 }
 
@@ -539,6 +249,7 @@ cl_wing::cl_wing(void)
 cl_wing::~cl_wing(void)
 {
 	delete input;
+	delete Model;
 }
 
 // Déclaration du pointeur vers le vaisseau principal
